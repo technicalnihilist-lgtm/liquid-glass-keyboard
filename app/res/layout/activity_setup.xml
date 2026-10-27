@@ -190,6 +190,11 @@
                     android:id="@+id/toggleHaptics"
                     style="@style/Choice"
                     android:text="Haptic tap" />
+
+                <RadioButton
+                    android:id="@+id/toggleMotion"
+                    style="@style/Choice"
+                    android:text="Drifting colour orbs" />
             </LinearLayout>
 
             <TextView
@@ -198,7 +203,7 @@
                 android:layout_marginTop="22dp"
                 android:alpha="0.55"
                 android:gravity="center"
-                android:text="No internet permission · 100% on-device · v1.0"
+                android:text="No internet permission · 100% on-device · v2.0"
                 android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>

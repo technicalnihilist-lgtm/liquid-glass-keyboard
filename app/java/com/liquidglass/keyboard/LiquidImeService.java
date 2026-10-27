@@ -1,9 +1,12 @@
 package com.liquidglass.keyboard;
 
 import android.inputmethodservice.InputMethodService;
+import android.os.Build;
 import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 
@@ -17,6 +20,7 @@ public class LiquidImeService extends InputMethodService implements KeyboardView
         keyboard = new KeyboardView(this);
         keyboard.setListener(this);
         keyboard.setPalette(GlassPalette.resolve(this));
+        applyBackdropBlur();
         return keyboard;
     }
 
@@ -27,6 +31,35 @@ public class LiquidImeService extends InputMethodService implements KeyboardView
         keyboard.setPalette(GlassPalette.resolve(this));
         keyboard.reset(shouldAutoShift(info));
         keyboard.setEnterLabel(enterLabelFor(info));
+        applyBackdropBlur();
+    }
+
+    /**
+     * Ask the system to blur whatever sits behind the keyboard window. Supported on
+     * Android 12+ where cross-window blur is enabled; everywhere else the board keeps
+     * its own painted backdrop, so nothing breaks.
+     */
+    private void applyBackdropBlur() {
+        boolean applied = false;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Window window = getWindow() == null ? null : getWindow().getWindow();
+                if (window != null) {
+                    WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+                    if (wm == null || wm.isCrossWindowBlurEnabled()) {
+                        WindowManager.LayoutParams lp = window.getAttributes();
+                        lp.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
+                        lp.setBlurBehindRadius(
+                                (int) (26 * getResources().getDisplayMetrics().density));
+                        window.setAttributes(lp);
+                        applied = true;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+            applied = false;
+        }
+        if (keyboard != null) keyboard.setBlurBackdrop(applied);
     }
 
     @Override

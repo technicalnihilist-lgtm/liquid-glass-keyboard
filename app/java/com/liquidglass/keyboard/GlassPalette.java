@@ -1,21 +1,26 @@
 package com.liquidglass.keyboard;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 
-/** Colour tokens for the liquid-glass look, in dark and light variants. */
+/** Colour tokens for the liquid-glass look, second generation. */
 public final class GlassPalette {
 
     public static final String PREFS = "liquid_glass_keyboard";
 
     public final boolean dark;
     public final int bg1, bg2;
-    public final int ink, sub;
+    public final int ink, inkDim;
     public final int orb1, orb2, orb3, orb4;
-    public final int keyTop, keyBot, keyEdge, keyHighlight;
-    public final int kbTop, kbBot, kbEdge;
+
+    /** Key glass: specular top, body, deep bottom. */
+    public final int keyTop, keyMid, keyBot;
+    public final int keyRimTop, keyRimBot, keyEdge, keySpec;
+
+    /** Plate (the sheet the keys sit on). */
+    public final int kbTop, kbMid, kbBot, kbEdge, kbSpec;
 
     private GlassPalette(boolean dark) {
         this.dark = dark;
@@ -24,29 +29,43 @@ public final class GlassPalette {
         orb3 = 0xFF19E0C0;
         orb4 = 0xFFFFB02E;
         if (dark) {
-            bg1 = 0xFF0A0F2C;
-            bg2 = 0xFF1B0B3A;
+            bg1 = 0xFF050A22;
+            bg2 = 0xFF1B0733;
             ink = 0xFFFFFFFF;
-            sub = 0x99FFFFFF;
-            keyTop = 0x42FFFFFF;
-            keyBot = 0x12FFFFFF;
-            keyEdge = 0x61FFFFFF;
-            keyHighlight = 0xB3FFFFFF;
-            kbTop = 0x1FFFFFFF;
-            kbBot = 0x08FFFFFF;
-            kbEdge = 0x38FFFFFF;
+            inkDim = 0x8CFFFFFF;
+
+            keyTop = 0x5CFFFFFF;
+            keyMid = 0x17FFFFFF;
+            keyBot = 0x07FFFFFF;
+            keyRimTop = 0xC7FFFFFF;
+            keyRimBot = 0x10FFFFFF;
+            keyEdge = 0x70FFFFFF;
+            keySpec = 0xD9FFFFFF;
+
+            kbTop = 0x2BFFFFFF;
+            kbMid = 0x12FFFFFF;
+            kbBot = 0x05FFFFFF;
+            kbEdge = 0x52FFFFFF;
+            kbSpec = 0x99FFFFFF;
         } else {
-            bg1 = 0xFFCFE0FF;
-            bg2 = 0xFFF4D6F5;
+            bg1 = 0xFFC6D9FF;
+            bg2 = 0xFFF7D9F6;
             ink = 0xFF0B1230;
-            sub = 0x8C0B1230;
-            keyTop = 0xB3FFFFFF;
-            keyBot = 0x33FFFFFF;
-            keyEdge = 0xE6FFFFFF;
-            keyHighlight = 0xFFFFFFFF;
-            kbTop = 0x1FFFFFFF;
-            kbBot = 0x08FFFFFF;
-            kbEdge = 0x38FFFFFF;
+            inkDim = 0x8C0B1230;
+
+            keyTop = 0xE0FFFFFF;
+            keyMid = 0xA8FFFFFF;
+            keyBot = 0x5CFFFFFF;
+            keyRimTop = 0xFFFFFFFF;
+            keyRimBot = 0x2EFFFFFF;
+            keyEdge = 0xEBFFFFFF;
+            keySpec = 0xFFFFFFFF;
+
+            kbTop = 0x47FFFFFF;
+            kbMid = 0x21FFFFFF;
+            kbBot = 0x0FFFFFFF;
+            kbEdge = 0x5CFFFFFF;
+            kbSpec = 0xFFFFFFFF;
         }
     }
 
@@ -71,6 +90,10 @@ public final class GlassPalette {
 
     public static boolean hapticsOn(Context c) {
         return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("haptics", true);
+    }
+
+    public static boolean motionOn(Context c) {
+        return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("motion", true);
     }
 
     /** Key height in dp. */
@@ -104,6 +127,12 @@ public final class GlassPalette {
     public static int withAlpha(int color, float alpha) {
         int a = Math.round(255f * Math.max(0f, Math.min(1f, alpha)));
         return (color & 0x00FFFFFF) | (a << 24);
+    }
+
+    /** Same hue and saturation, new alpha relative to the original alpha. */
+    public static int scaleAlpha(int color, float factor) {
+        int a = Math.round(Color.alpha(color) * Math.max(0f, factor));
+        return (color & 0x00FFFFFF) | (Math.min(255, a) << 24);
     }
 
     private static int clamp(int v) {

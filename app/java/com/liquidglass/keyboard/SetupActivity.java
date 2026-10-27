@@ -37,7 +37,7 @@ public class SetupActivity extends Activity {
         tint(findViewById(android.R.id.content), pal.ink);
 
         EditText field = (EditText) findViewById(R.id.tryField);
-        field.setHintTextColor(pal.sub);
+        field.setHintTextColor(pal.inkDim);
         field.setInputType(InputType.TYPE_CLASS_TEXT
                 | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
                 | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
@@ -115,7 +115,7 @@ public class SetupActivity extends Activity {
                 pal = GlassPalette.resolve(SetupActivity.this);
                 backdrop.setPalette(pal);
                 tint(findViewById(android.R.id.content), pal.ink);
-                ((EditText) findViewById(R.id.tryField)).setHintTextColor(pal.sub);
+                ((EditText) findViewById(R.id.tryField)).setHintTextColor(pal.inkDim);
             }
         });
     }
@@ -141,8 +141,10 @@ public class SetupActivity extends Activity {
     private void setupToggles() {
         final RadioButton sound = (RadioButton) findViewById(R.id.toggleSound);
         final RadioButton haptics = (RadioButton) findViewById(R.id.toggleHaptics);
+        final RadioButton motion = (RadioButton) findViewById(R.id.toggleMotion);
         sound.setChecked(GlassPalette.soundOn(this));
         haptics.setChecked(GlassPalette.hapticsOn(this));
+        motion.setChecked(GlassPalette.motionOn(this));
         sound.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -155,6 +157,13 @@ public class SetupActivity extends Activity {
             public void onClick(View v) {
                 getSharedPreferences(GlassPalette.PREFS, MODE_PRIVATE)
                         .edit().putBoolean("haptics", haptics.isChecked()).apply();
+            }
+        });
+        motion.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getSharedPreferences(GlassPalette.PREFS, MODE_PRIVATE)
+                        .edit().putBoolean("motion", motion.isChecked()).apply();
             }
         });
     }
