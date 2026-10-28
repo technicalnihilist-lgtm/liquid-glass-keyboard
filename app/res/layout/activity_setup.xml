@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.liquidglass.keyboard.GlassBackdrop
+        android:id="@+id/backdrop"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="22dp"
+            android:paddingTop="52dp"
+            android:paddingRight="22dp"
+            android:paddingBottom="34dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="-0.01"
+                android:text="Liquid Glass"
+                android:textSize="31sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:alpha="0.72"
+                android:text="A glassy, fully offline keyboard"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:alpha="0.9"
+                android:text="Checking status…"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/card_glass"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="SETUP" />
+
+                <Button
+                    android:id="@+id/btnEnable"
+                    style="@style/GlassButton"
+                    android:text="1 · Enable keyboard" />
+
+                <Button
+                    android:id="@+id/btnSelect"
+                    style="@style/GlassButton"
+                    android:text="2 · Choose keyboard" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:alpha="0.6"
+                    android:text="After enabling, switch to it from any text field with the keyboard button in the navigation bar."
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/card_glass"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="TRY IT" />
+
+                <EditText
+                    android:id="@+id/tryField"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/edit_glass"
+                    android:gravity="top|start"
+                    android:hint="Tap here and start typing…"
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:minHeight="104dp"
+                    android:padding="14dp"
+                    android:textSize="17sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/card_glass"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="APPEARANCE" />
+
+                <RadioGroup
+                    android:id="@+id/radioTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp">
+
+                    <RadioButton
+                        android:id="@+id/themeSystem"
+                        style="@style/Choice"
+                        android:text="Match system" />
+
+                    <RadioButton
+                        android:id="@+id/themeDark"
+                        style="@style/Choice"
+                        android:text="Dark glass" />
+
+                    <RadioButton
+                        android:id="@+id/themeLight"
+                        style="@style/Choice"
+                        android:text="Light glass" />
+                </RadioGroup>
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="14dp"
+                    android:text="KEY HEIGHT" />
+
+                <RadioGroup
+                    android:id="@+id/radioSize"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp">
+
+                    <RadioButton
+                        android:id="@+id/sizeSmall"
+                        style="@style/Choice"
+                        android:text="Small" />
+
+                    <RadioButton
+                        android:id="@+id/sizeMedium"
+                        style="@style/Choice"
+                        android:text="Medium" />
+
+                    <RadioButton
+                        android:id="@+id/sizeLarge"
+                        style="@style/Choice"
+                        android:text="Large" />
+                </RadioGroup>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/card_glass"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="FEEDBACK" />
+
+                <RadioButton
+                    android:id="@+id/toggleSound"
+                    style="@style/Choice"
+                    android:layout_marginTop="6dp"
+                    android:text="Key click sound" />
+
+                <RadioButton
+                    android:id="@+id/toggleHaptics"
+                    style="@style/Choice"
+                    android:text="Haptic tap" />
+
+                <RadioButton
+                    android:id="@+id/toggleMotion"
+                    style="@style/Choice"
+                    android:text="Drifting colour orbs" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:alpha="0.55"
+                android:gravity="center"
+                android:text="No internet permission · 100% on-device · v2.0"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

@@ -1,0 +1,15 @@
+* text=auto eol=lf
+
+*.apk binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.jks binary
+*.keystore binary
+*.ttf binary
+
+*.java text
+*.xml text
+*.md text
+*.sh text eol=lf
+*.py text eol=lf

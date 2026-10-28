@@ -1,0 +1,1 @@
+Generation 2 glass: layered specular rims, caustic light along each key, real backdrop blur on Android 12+, drifting colour orbs, and a thin plate you can see through. Adds MIT licence headers, CI, and the original design file.

@@ -1,0 +1,38 @@
+A real Android keyboard with a glassy, colour-shifting keypad — built as a native input method, not a web page in a shell, and fully offline.
+
+No internet permission. Not "we don't collect data" — the app literally cannot reach the network, because it never asks for the permission. No account, no ads, no analytics, no telemetry, no update checks.
+
+THE GLASS
+
+Every key is layered glass rather than a flat rounded rectangle: a blurred specular rim along its top edge, an inner rim that fades to nothing at the base, a body that thins downwards, a pool of light gathering along the bottom of each key, a light source in the upper left, and two shadows — tight under the glass, wide and soft beneath — so keys sit on the sheet instead of floating above it.
+
+On Android 12 and later the keyboard asks the system to blur whatever app is behind it, and drops its own paint to a thin veil. You type over a frosted version of the real screen, not a picture of one. Where the system cannot blur, the board falls back to its own painted backdrop.
+
+Behind the keys, four colour orbs drift slowly and bleed through the glass. You can switch the motion off if you prefer a still board.
+
+TYPING
+
+- Full QWERTY with shift and double-tap caps lock
+- Automatic capitals at the start of a sentence
+- Numbers, symbols and emoji pages
+- Long-press for accented letters: e gives è é ê ë ē ė ę, and sixteen letters carry alternates; slide to the one you want and let go
+- Backspace deletes a character, repeats while held, clears a selection, and steps over whole emoji instead of splitting them
+- A return key that reads the field: send, search, go, next, done or prev, and falls back to a newline in multi-line boxes
+- Every press rotates the accent hue and throws a glow and a colour flare
+- Popup preview above the key you are pressing
+- Key-click sound and haptic tap, both switchable
+- Dark glass, light glass, or follow the system theme; three key heights
+
+WHAT IT DOES NOT DO
+
+No predictive text, no autocorrect, no swipe typing, no clipboard history, no cloud sync. It types what you press and nothing else. That is a design decision, not a missing feature.
+
+OPEN SOURCE
+
+MIT licensed. The whole app is seven Java files and a handful of resources, built with aapt2, javac, d8 and apksigner — no Gradle, no dependencies, no third-party libraries. Read it, change it, build it yourself: the repository has a build script and a CI workflow that builds the APK on every push and fails if the result ever requests the internet permission.
+
+SETTING IT UP
+
+Install, open the app, tap "Enable keyboard", then "Choose keyboard" and pick Liquid Glass Keyboard. The app shows whether it is enabled and whether it is currently in use, and has a text box so you can try it immediately.
+
+Requires Android 5.0 or newer. VIBRATE permission only.
