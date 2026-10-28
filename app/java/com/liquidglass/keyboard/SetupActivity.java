@@ -1,3 +1,10 @@
+/*
+ * Liquid Glass Keyboard — generation 2
+ * Copyright (c) 2026 Liquid Glass Keyboard contributors
+ *
+ * Released under the MIT License. See the LICENSE file in the project root
+ * for the full text, or https://opensource.org/licenses/MIT
+ */
 package com.liquidglass.keyboard;
 
 import android.app.Activity;

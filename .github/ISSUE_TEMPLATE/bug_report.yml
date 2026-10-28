@@ -1,0 +1,62 @@
+name: Bug report
+description: Something is wrong with the keyboard
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please do not include passwords or private text in screenshots.
+        For a security problem, use the private link in SECURITY.md instead of this form.
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Settings → Apps → Liquid Glass Keyboard, or the release tag you installed.
+      placeholder: "2.0.1"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: "Pixel 7, Android 14"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: theme
+    attributes:
+      label: Theme
+      options:
+        - Dark glass
+        - Light glass
+        - Follow system
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what happened instead.
+      placeholder: |
+        1. Opened Messages
+        2. Long-pressed the "e" key
+        3. Expected the accent picker; the key just typed "e"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: Where does it happen
+      description: Does it happen in every app, or one in particular?
+      options:
+        - Every app
+        - One specific app (name it above)
+        - Only in the setup screen's test box
+    validations:
+      required: true

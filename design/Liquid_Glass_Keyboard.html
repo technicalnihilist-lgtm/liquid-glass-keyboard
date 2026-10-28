@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Liquid Glass Keyboard</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg1:#0a0f2c;--bg2:#1b0b3a;--ink:#fff;--sub:rgba(255,255,255,.6);
+  --o1:#2b6bff;--o2:#ff3ea5;--o3:#19e0c0;--o4:#ffb02e;
+  --k-top:rgba(255,255,255,.26);--k-bot:rgba(255,255,255,.07);--k-edge:rgba(255,255,255,.38);
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    color-scheme:light;
+    --bg1:#cfe0ff;--bg2:#f4d6f5;--ink:#0b1230;--sub:rgba(11,18,48,.55);
+    --k-top:rgba(255,255,255,.7);--k-bot:rgba(255,255,255,.2);--k-edge:rgba(255,255,255,.9);
+  }
+}
+:root[data-theme="light"]{color-scheme:light;--bg1:#cfe0ff;--bg2:#f4d6f5;--ink:#0b1230;--sub:rgba(11,18,48,.55);--k-top:rgba(255,255,255,.7);--k-bot:rgba(255,255,255,.2);--k-edge:rgba(255,255,255,.9)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  font-family:-apple-system,"SF Pro Display","Segoe UI",system-ui,Roboto,sans-serif;
+  color:var(--ink);background:linear-gradient(160deg,var(--bg1),var(--bg2));
+  display:flex;flex-direction:column;align-items:center;overflow:hidden;user-select:none;-webkit-user-select:none;
+}
+.orb{position:fixed;width:46vmax;height:46vmax;border-radius:50%;filter:blur(60px);opacity:.75;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.o1{background:var(--o1);left:-14vmax;top:-10vmax}
+.o2{background:var(--o2);right:-16vmax;top:18vh;animation-delay:-7s}
+.o3{background:var(--o3);left:-8vmax;bottom:-18vmax;animation-delay:-13s}
+.o4{background:var(--o4);right:-6vmax;bottom:-12vmax;width:30vmax;height:30vmax;opacity:.55;animation-delay:-3s}
+@keyframes drift{to{transform:translate(8vmax,-6vmax) scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.orb{animation:none}}
+
+.screen{flex:1;width:100%;max-width:560px;padding:28px 22px 12px;display:flex;position:relative;z-index:1;min-height:0}
+.pane{
+  flex:1;border-radius:34px;padding:22px 24px;overflow:auto;position:relative;
+  background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(255,255,255,.05));
+  -webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);
+  border:1px solid var(--k-edge);
+  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.65),inset 0 -1px 2px rgba(255,255,255,.15),0 20px 50px rgba(0,0,0,.25);
+  font-size:26px;line-height:1.35;white-space:pre-wrap;word-break:break-word;
+}
+.ph{color:var(--sub)}
+.caret{display:inline-block;width:3px;height:1.05em;margin-left:1px;vertical-align:-.14em;border-radius:2px;background:hsl(var(--h,200) 100% 70%);box-shadow:0 0 12px hsl(var(--h,200) 100% 65%);animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.kb-wrap{width:100%;max-width:560px;padding:6px 10px 14px;position:relative;z-index:1}
+.kb{
+  position:relative;padding:10px 6px 8px;border-radius:36px;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.4),0 18px 40px rgba(0,0,0,.25);
+}
+.row{display:flex;justify-content:center;gap:6px;margin-bottom:9px;position:relative;z-index:1}
+.key{
+  --h:200;flex:1 1 0;min-width:0;height:52px;border-radius:16px;border:1px solid var(--k-edge);
+  color:var(--ink);font-weight:500;font-size:22px;line-height:1;font-family:inherit;cursor:pointer;padding:0;position:relative;z-index:1;
+  background:linear-gradient(180deg,var(--k-top),var(--k-bot));
+  -webkit-backdrop-filter:blur(14px) saturate(190%) brightness(1.08);backdrop-filter:blur(14px) saturate(190%) brightness(1.08);
+  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.75),inset 0 -2px 3px rgba(255,255,255,.12),inset 0 0 12px rgba(255,255,255,.08),0 6px 12px rgba(0,0,0,.18);
+  text-shadow:0 1px 6px rgba(0,0,0,.18);transition:background .25s;touch-action:manipulation;
+}
+.key.w15{flex:1.5}.key.w2{flex:2}.key.w5{flex:5}
+.key.fn{font-size:16px;font-weight:600}
+.key.on{background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,.35));color:#0b1230;text-shadow:none}
+.key.flash{animation:flash .55s ease-out}
+@keyframes flash{
+  0%{transform:scale(.92);
+     background:linear-gradient(180deg,hsl(var(--h) 100% 85%/.6),hsl(var(--h) 100% 65%/.28));
+     box-shadow:inset 0 1.5px 1px rgba(255,255,255,.95),0 0 0 1px hsl(var(--h) 100% 78%/.9),0 0 22px 4px hsl(var(--h) 100% 65%/.9),0 0 54px 12px hsl(var(--h) 100% 60%/.55)}
+  100%{transform:scale(1)}
+}
+.flare{
+  position:absolute;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;pointer-events:none;z-index:0;
+  background:radial-gradient(circle,hsl(var(--h) 100% 68%/.95),hsl(var(--h) 100% 60%/.35) 45%,transparent 70%);
+  filter:blur(6px);animation:flare .7s ease-out forwards;
+}
+@keyframes flare{from{opacity:1;transform:scale(.5)}to{opacity:0;transform:scale(1.9)}}
+.key:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media (max-width:420px){.key{height:46px;font-size:20px;border-radius:14px}.row{gap:5px;margin-bottom:8px}.pane{font-size:22px}}
+@media (prefers-reduced-motion:reduce){.key.flash,.flare{animation-duration:.01s}}
+</style>
+</head>
+<body>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="orb o4"></div>
+<main class="screen"><div class="pane" id="out" aria-live="polite"></div></main>
+<div class="kb-wrap"><div class="kb" id="kb"></div></div>
+
+<script>
+(function(){
+  var out=document.getElementById('out'), kb=document.getElementById('kb');
+  var text='', mode='abc', shift=false, caps=false, lastShift=0, hue=200;
+  var L={
+    abc:[ 'q w e r t y u i o p','a s d f g h j k l','shift z x c v b n m back','123 space enter' ],
+    '123':[ '1 2 3 4 5 6 7 8 9 0','- / : ; ( ) $ & @ "','sym . , ? ! \' back','abc space enter' ],
+    sym:[ '[ ] { } # % ^ * + =','_ \\ | ~ < > € £ ¥ •','123 . , ? ! \' back','abc space enter' ]
+  };
+  var labels={shift:'⇧',back:'⌫',enter:'return',space:'space','123':'123',abc:'ABC',sym:'#+='};
+
+  function draw(){
+    var h='<span class="caret"></span>';
+    out.innerHTML = text ? esc(text)+h : '<span class="ph">Start typing…</span>'+h;
+    out.style.setProperty('--h',hue);
+    out.scrollTop=out.scrollHeight;
+  }
+  function esc(s){return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+
+  function build(){
+    kb.innerHTML='';
+    L[mode].forEach(function(r){
+      var row=document.createElement('div'); row.className='row';
+      r.split(' ').forEach(function(k){
+        var b=document.createElement('button');
+        b.className='key'; b.type='button'; b.dataset.k=k;
+        var fn=labels[k]!==undefined;
+        if(fn){ b.classList.add('fn'); if(k==='space')b.classList.add('w5'); else if(k==='shift'||k==='back'||k==='sym'&&mode==='123')b.classList.add('w15'); else b.classList.add('w2'); }
+        if(k==='shift'||k==='back')b.style.fontSize='22px';
+        if(k==='space')b.style.fontSize='15px';
+        b.textContent = fn ? labels[k] : disp(k);
+        b.setAttribute('aria-label', fn?labels[k]:k);
+        row.appendChild(b);
+      });
+      kb.appendChild(row);
+    });
+    paintShift();
+  }
+  function disp(k){ return (mode==='abc' && (shift||caps)) ? k.toUpperCase() : k; }
+  function paintShift(){
+    kb.querySelectorAll('.key').forEach(function(b){
+      var k=b.dataset.k;
+      if(labels[k]===undefined) b.textContent=disp(k);
+      if(k==='shift'){ b.classList.toggle('on',shift||caps); b.textContent=caps?'⇪':'⇧'; }
+    });
+  }
+
+  function glow(el){
+    hue=(hue+41)%360;
+    el.style.setProperty('--h',hue);
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    var kr=kb.getBoundingClientRect(), r=el.getBoundingClientRect();
+    var f=document.createElement('div'); f.className='flare';
+    f.style.left=(r.left-kr.left+r.width/2)+'px'; f.style.top=(r.top-kr.top+r.height/2)+'px';
+    f.style.setProperty('--h',hue);
+    kb.appendChild(f); setTimeout(function(){f.remove()},750);
+  }
+
+  function press(k){
+    if(k==='shift'){
+      var n=Date.now();
+      if(n-lastShift<320){caps=!caps; shift=caps;} else {shift=!shift; caps=false;}
+      lastShift=n; paintShift(); return;
+    }
+    if(k==='123'||k==='abc'||k==='sym'){ mode=k; build(); return; }
+    if(k==='back'){ var a=Array.from(text); a.pop(); text=a.join(''); }
+    else if(k==='space') text+=' ';
+    else if(k==='enter') text+='\n';
+    else {
+      text+= (mode==='abc' && (shift||caps)) ? k.toUpperCase() : k;
+      if(shift&&!caps){shift=false; paintShift();}
+    }
+    draw();
+  }
+
+  var held=null, timer=null;
+  function stop(){ clearTimeout(timer); clearInterval(timer); held=null; }
+  kb.addEventListener('pointerdown',function(e){
+    var b=e.target.closest('.key'); if(!b) return;
+    e.preventDefault(); glow(b); press(b.dataset.k);
+    if(b.dataset.k==='back'){
+      held=b; timer=setTimeout(function(){ timer=setInterval(function(){glow(b);press('back')},70) },420);
+    }
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(function(ev){kb.addEventListener(ev,stop)});
+
+  document.addEventListener('keydown',function(e){
+    if(e.metaKey||e.ctrlKey||e.altKey) return;
+    var k=e.key, map={Backspace:'back',Enter:'enter',' ':'space',Shift:null,CapsLock:null};
+    if(k in map){ if(map[k]===null) return; k=map[k]; }
+    else if(k.length!==1) return;
+    e.preventDefault();
+    var low=k.length===1?k.toLowerCase():k;
+    if(k.length===1 && /[a-z]/i.test(k)){
+      if(mode!=='abc'){mode='abc';build();}
+      var up=k!==low; if(up!==(shift||caps)){shift=up;paintShift();}
+      k=low;
+    } else if(k.length===1 && !kb.querySelector('[data-k="'+(k==='"'?'\\"':k==='\\'?'\\\\':k)+'"]')){
+      text+=k; draw(); return;
+    }
+    var el=kb.querySelector('[data-k="'+(k==='"'?'\\"':k==='\\'?'\\\\':k)+'"]');
+    if(el) glow(el);
+    press(k);
+  });
+
+  build(); draw();
+})();
+</script>
+</body>
+</html>
