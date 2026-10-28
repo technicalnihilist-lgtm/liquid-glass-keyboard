@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liquid Glass Keyboard</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+    color: #fff; line-height: 1.65; min-height: 100vh;
+    background: radial-gradient(circle at 15% 0%, #1b2a6b 0%, transparent 55%),
+                radial-gradient(circle at 95% 30%, #6b1b57 0%, transparent 50%),
+                radial-gradient(circle at 10% 95%, #0f5c52 0%, transparent 50%),
+                linear-gradient(160deg, #050a22, #1b0733);
+    background-attachment: fixed;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 56px 22px 80px; }
+  h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -.02em; }
+  p.lede { color: rgba(255,255,255,.7); margin: 0 0 26px; font-size: 16px; }
+  .shots { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 26px; }
+  .shots img {
+    width: 190px; border-radius: 20px; flex: 0 0 auto;
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 12px 30px rgba(0,0,0,.45);
+  }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+    border: 1px solid rgba(255,255,255,.22); border-radius: 24px;
+    padding: 26px; margin-bottom: 16px;
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,.3);
+  }
+  h2 { font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.7); margin: 0 0 12px; }
+  ul { margin: 0; padding-left: 20px; }
+  li { font-size: 15.5px; margin-bottom: 6px; }
+  .btn {
+    display: inline-block; margin: 6px 8px 6px 0; padding: 13px 22px;
+    border-radius: 16px; text-decoration: none; color: #fff; font-weight: 600;
+    background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.1));
+    border: 1px solid rgba(255,255,255,.4);
+  }
+  a { color: #8fc0ff; }
+  footer { margin-top: 24px; text-align: center; font-size: 13px; color: rgba(255,255,255,.5); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Liquid Glass Keyboard</h1>
+  <p class="lede">A real Android keyboard with a glassy, colour-shifting keypad. Fully offline — no internet permission at all.</p>
+
+  <div class="shots">
+    <img src="../screenshots/01-keyboard.png" alt="Dark glass keyboard">
+    <img src="../screenshots/02-shift.png" alt="Shift held">
+    <img src="../screenshots/03-numbers.png" alt="Numbers page">
+    <img src="../screenshots/06-setup.png" alt="Setup screen">
+  </div>
+
+  <div class="card">
+    <h2>Download</h2>
+    <a class="btn" href="https://github.com/technicalnihilist-lgtm/liquid-glass-keyboard/releases/latest/download/LiquidGlassKeyboard.apk">Download the APK</a>
+    <a class="btn" href="https://github.com/technicalnihilist-lgtm/liquid-glass-keyboard">Source on GitHub</a>
+  </div>
+
+  <div class="card">
+    <h2>What it does</h2>
+    <ul>
+      <li>Full QWERTY with shift, double-tap caps lock and sentence capitals</li>
+      <li>Numbers, symbols and emoji pages; long-press accents on 16 letters</li>
+      <li>Repeating backspace that clears selections and steps over whole emoji</li>
+      <li>A return key that reads the field: send, search, go, next, done</li>
+      <li>Dark glass, light glass, or follow the system; three key heights</li>
+      <li>Real backdrop blur on Android 12+; layered specular glass everywhere</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>What it does not do</h2>
+    <ul>
+      <li>No predictive text, no autocorrect, no swipe typing</li>
+      <li>No clipboard history, no accounts, no ads, no analytics</li>
+      <li>No internet permission — it cannot reach the network</li>
+    </ul>
+  </div>
+
+  <footer>
+    MIT licensed &middot; <a href="privacy.html">Privacy policy</a>
+  </footer>
+</div>
+</body>
+</html>
