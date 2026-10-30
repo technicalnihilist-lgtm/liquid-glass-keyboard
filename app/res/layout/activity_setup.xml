@@ -37,19 +37,20 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:alpha="0.72"
-                android:text="A glassy, fully offline keyboard"
+                android:text="Generation 3 — tune the glass yourself"
                 android:textSize="15sp" />
 
             <TextView
                 android:id="@+id/status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="12dp"
                 android:alpha="0.9"
                 android:text="Checking status…"
                 android:textSize="14sp" />
 
             <LinearLayout
+                android:id="@+id/cardSetup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -81,6 +82,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/cardTry"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
@@ -101,109 +103,45 @@
                     android:gravity="top|start"
                     android:hint="Tap here and start typing…"
                     android:inputType="textCapSentences|textMultiLine"
-                    android:minHeight="104dp"
+                    android:minHeight="88dp"
                     android:padding="14dp"
                     android:textSize="17sp" />
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/cardGlass"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/card_glass"
                 android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    style="@style/SectionTitle"
-                    android:text="APPEARANCE" />
-
-                <RadioGroup
-                    android:id="@+id/radioTheme"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp">
-
-                    <RadioButton
-                        android:id="@+id/themeSystem"
-                        style="@style/Choice"
-                        android:text="Match system" />
-
-                    <RadioButton
-                        android:id="@+id/themeDark"
-                        style="@style/Choice"
-                        android:text="Dark glass" />
-
-                    <RadioButton
-                        android:id="@+id/themeLight"
-                        style="@style/Choice"
-                        android:text="Light glass" />
-                </RadioGroup>
-
-                <TextView
-                    style="@style/SectionTitle"
-                    android:layout_marginTop="14dp"
-                    android:text="KEY HEIGHT" />
-
-                <RadioGroup
-                    android:id="@+id/radioSize"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp">
-
-                    <RadioButton
-                        android:id="@+id/sizeSmall"
-                        style="@style/Choice"
-                        android:text="Small" />
-
-                    <RadioButton
-                        android:id="@+id/sizeMedium"
-                        style="@style/Choice"
-                        android:text="Medium" />
-
-                    <RadioButton
-                        android:id="@+id/sizeLarge"
-                        style="@style/Choice"
-                        android:text="Large" />
-                </RadioGroup>
-            </LinearLayout>
+                android:padding="18dp" />
 
             <LinearLayout
+                android:id="@+id/cardKeys"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/card_glass"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:padding="18dp" />
 
-                <TextView
-                    style="@style/SectionTitle"
-                    android:text="FEEDBACK" />
-
-                <RadioButton
-                    android:id="@+id/toggleSound"
-                    style="@style/Choice"
-                    android:layout_marginTop="6dp"
-                    android:text="Key click sound" />
-
-                <RadioButton
-                    android:id="@+id/toggleHaptics"
-                    style="@style/Choice"
-                    android:text="Haptic tap" />
-
-                <RadioButton
-                    android:id="@+id/toggleMotion"
-                    style="@style/Choice"
-                    android:text="Drifting colour orbs" />
-            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/cardAppearance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/card_glass"
+                android:orientation="vertical"
+                android:padding="18dp" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
+                android:layout_marginTop="20dp"
                 android:alpha="0.55"
                 android:gravity="center"
-                android:text="No internet permission · 100% on-device · v2.0"
+                android:text="No internet permission · 100% on-device · v3.0"
                 android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>

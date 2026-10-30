@@ -1,13 +1,19 @@
 """Renders screenshots that mirror KeyboardView's Gen-2 glass maths."""
 import math
+import os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 FONT_DIR = "/scratch/work/fonts/"
-OUT = "/scratch/work/lgk/screenshots/"
+OUT = os.environ.get("OUT_DIR", "/scratch/work/lgk/screenshots/")
 
-D = 3.0
-W, H = 1080, 2400
+# Canvas is chosen by pixel width and design width in dp, so one script renders
+# both the phone set (1080 px / 360 dp) and the tablet set Amazon wants
+# (1920 x 2560 px / 800 dp wide).
+W = int(os.environ.get("W_PX", "1080"))
+H = int(os.environ.get("H_PX", "2400"))
+DP_W = float(os.environ.get("DP_W", "360"))
+D = W / DP_W
 
 
 def dp(v):
@@ -417,7 +423,7 @@ def render_keyboard(base, pal, rows, hue=205.0, press=None, shift_on=False,
 
 # ------------------------------------------------------------------ app mock
 
-def app_screen(size, dark=True):
+def app_screen(size, dark=True, kb_top=None):
     w, h = size
     img = Image.new("RGBA", size, hexc("#0B1020") if dark else hexc("#F2F4FA"))
     d = ImageDraw.Draw(img)
@@ -429,8 +435,11 @@ def app_screen(size, dark=True):
     f = F_BODY
     asc, desc = f.getmetrics()
 
-    def bubble(x, y, text, bw, right=False, accent=False):
+    def draw_bubble(x, y, text, bw, right=False, accent=False):
         lines = text.split("\n")
+        need = max(d.textlength(l, font=f) for l in lines) + dp(28)
+        bw = max(bw, need)
+        bw = min(bw, w - dp(40))
         bh = dp(18) + len(lines) * (asc + desc) + dp(4)
         box = [x - bw, y, x, y + bh] if right else [x, y, x + bw, y + bh]
         fill = (43, 107, 255, 235) if accent else ((255, 255, 255, 26) if dark else (255, 255, 255, 225))
@@ -440,10 +449,31 @@ def app_screen(size, dark=True):
         for line in lines:
             d.text((box[0] + dp(14), ty), line, font=f, fill=color)
             ty += asc + desc
+        return bh
 
-    bubble(dp(20), dp(112), "Try the new keyboard yet?", dp(250))
-    bubble(w - dp(20), dp(186), "It's glass. And offline.", dp(236), right=True, accent=True)
-    bubble(dp(20), dp(256), "Second generation \u2014 everything\nbehind it blurs through.", dp(300))
+    # Stack messages upward from the input bar so the mock fills a phone frame
+    # and a tall tablet frame alike.
+    messages = [
+        ("Typing on glass is strange at first.", 300, False, False),
+        ("Does it work offline though?", 260, True, False),
+        ("Completely. No internet permission at all.", 320, False, False),
+        ("Okay, that's actually impressive.", 280, True, False),
+        ("Try the new keyboard yet?", 250, False, False),
+        ("It's glass. And offline.", 236, True, True),
+        ("Second generation \u2014 everything\nbehind it blurs through.", 300, False, False),
+        ("No internet permission either, so\nnothing can leave the phone.", 310, True, False),
+        ("Then it really is private.", 240, False, False),
+    ]
+    base = (kb_top if kb_top is not None else h) - dp(64)
+    y = base - dp(14)
+    for text, bw, right, accent in reversed(messages):
+        lines = text.split("\n")
+        bh = dp(18) + len(lines) * (asc + desc) + dp(4)
+        if y - bh < dp(108):
+            break
+        y -= bh
+        draw_bubble(dp(20) if not right else w - dp(20), y, text, bw, right, accent)
+        y -= dp(12)
     return img
 
 
@@ -467,8 +497,8 @@ def input_bar(img, y, text, dark=True):
 def compose(name, pal, rows, typed, press=None, shift_on=False, accent_popup=None,
             dark_app=True, blur_behind=False):
     base = Image.new("RGBA", (W, H), hexc("#0B1020"))
-    app = app_screen((W, H), dark=dark_app)
     kb_h = int(round(keyboard_height(len(rows))))
+    app = app_screen((W, H), dark=dark_app, kb_top=H - kb_h)
     input_bar(app, H - kb_h - dp(64), typed, dark=dark_app)
     if blur_behind:
         app = app.filter(ImageFilter.GaussianBlur(dp(3)))
@@ -529,6 +559,48 @@ def comp_text(img, xy, text, f, color, anchor=None):
     img.alpha_composite(layer)
 
 
+def slider_block(img, x, y, w, pal, label, value, pct):
+    d = ImageDraw.Draw(img)
+    f = font("Roboto-Regular", 16)
+    fv = font("Roboto-Medium", 15)
+    comp_text(img, (x, y), label, f, pal["ink"])
+    comp_text(img, (x + w, y), value, fv, pal["ink_dim"], anchor="ra")
+    ty = y + dp(26)
+    track = [x, ty, x + w, ty + dp(8)]
+    comp_round(img, track, dp(4), fill=(255, 255, 255, 56) if pal["dark"] else (11, 18, 48, 40))
+    fill_w = max(dp(4), int(w * pct))
+    comp_round(img, [x, ty, x + fill_w, ty + dp(8)], dp(4), fill=(255, 255, 255, 235) if pal["dark"] else (255, 255, 255, 255))
+    thumb_cx = x + fill_w
+    comp_round(img, [thumb_cx - dp(15), ty - dp(8), thumb_cx + dp(15), ty + dp(16)], dp(12),
+               fill=(255, 255, 255, 255), outline=(0, 0, 0, 40), width=1)
+
+
+def switch_row(img, x, y, w, pal, label, on):
+    comp_text(img, (x, y + dp(8)), label, font("Roboto-Regular", 16), pal["ink"])
+    sw_w, sw_h = dp(54), dp(32)
+    sx = x + w - sw_w
+    fill = (52, 199, 89, 255) if on else ((255, 255, 255, 60) if pal["dark"] else (11, 18, 48, 40))
+    comp_round(img, [sx, y + dp(4), sx + sw_w, y + dp(4) + sw_h], dp(16), fill=fill,
+               outline=(255, 255, 255, 90) if pal["dark"] else (255, 255, 255, 220), width=1)
+    tx = sx + sw_w - dp(16) if on else sx + dp(16)
+    comp_ellipse(img, [tx - dp(13), y + dp(7), tx + dp(13), y + dp(33)], fill=(255, 255, 255, 255))
+
+
+def segment_row(img, x, y, w, pal, labels, selected):
+    seg = [x, y, x + w, y + dp(46)]
+    comp_round(img, seg, dp(23), fill=(255, 255, 255, 30) if pal["dark"] else (255, 255, 255, 150),
+               outline=(255, 255, 255, 80) if pal["dark"] else (255, 255, 255, 230), width=1)
+    bw = (w - dp(8)) / len(labels)
+    for i, lab in enumerate(labels):
+        bx = x + dp(4) + i * bw
+        if i == selected:
+            comp_round(img, [bx, y + dp(4), bx + bw, y + dp(42)], dp(19),
+                       fill=(255, 255, 255, 90) if pal["dark"] else (255, 255, 255, 235),
+                       outline=(255, 255, 255, 130) if pal["dark"] else (255, 255, 255, 255), width=1)
+        comp_text(img, (bx + bw / 2, y + dp(23)), lab, font("Roboto-Medium", 15),
+                  pal["ink"], anchor="mm")
+
+
 def render_setup(name, pal):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw_backdrop(img, pal, W, H)
@@ -539,17 +611,8 @@ def render_setup(name, pal):
     sub_ink = (255, 255, 255, 180) if pal["dark"] else (11, 18, 48, 165)
     status_ink = (255, 255, 255, 228) if pal["dark"] else ink
     sec_ink = (255, 255, 255, 175) if pal["dark"] else (11, 18, 48, 145)
-    radio = hexc("#7FB0FF")
-    f_body = font("Roboto-Regular", 15)
     x = dp(22)
-
-    def radio_row(y0, label, sel):
-        cx, cy = x + dp(20), y0 + dp(5)
-        comp_ellipse(img, [cx, cy, cx + dp(15), cy + dp(15)], outline=radio,
-                     width=max(1, int(dp(1.6))))
-        if sel:
-            comp_ellipse(img, [cx + dp(4.2), cy + dp(4.2), cx + dp(10.8), cy + dp(10.8)], fill=radio)
-        comp_text(img, (cx + dp(26), cy + dp(7.5)), label, f_body, ink, anchor="lm")
+    inner = dp(18)
 
     def card(y0, h):
         comp_round(img, [x, y0, W - x, y0 + h], dp(26), fill=card_fill, outline=card_edge,
@@ -561,14 +624,25 @@ def render_setup(name, pal):
         img.alpha_composite(spec.filter(ImageFilter.GaussianBlur(dp(1.0))))
 
     def section(y0, text):
-        comp_text(img, (x + dp(16), y0), text, font("Roboto-Bold", 12), sec_ink)
-        return y0 + dp(20)
+        comp_text(img, (x + inner, y0), text, font("Roboto-Bold", 12), sec_ink)
+        return y0 + dp(22)
+
+    def button(y0, label):
+        box = [x + inner, y0, W - x - inner, y0 + dp(50)]
+        comp_round(img, box, dp(15),
+                   fill=(255, 255, 255, 58) if pal["dark"] else (255, 255, 255, 205),
+                   outline=(255, 255, 255, 107) if pal["dark"] else (255, 255, 255, 235),
+                   width=max(1, int(dp(1))))
+        comp_text(img, ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), label,
+                  font("Roboto-Medium", 16), ink, anchor="mm")
+        return y0 + dp(58)
 
     y = dp(40)
     comp_text(img, (x, y), "Liquid Glass", font("Roboto-Bold", 30), ink)
     y += dp(40)
-    comp_text(img, (x, y), "Generation 2 \u2014 deeper glass, real blur", font("Roboto-Regular", 15), sub_ink)
-    y += dp(24)
+    comp_text(img, (x, y), "Generation 3 — tune the glass yourself",
+              font("Roboto-Regular", 15), sub_ink)
+    y += dp(26)
     f_status = font("Roboto-Regular", 14)
     for line in wrap(dm, "Enabled. Tap \u201cChoose keyboard\u201d and pick Liquid Glass.",
                      f_status, W - 2 * x):
@@ -576,22 +650,17 @@ def render_setup(name, pal):
         y += dp(18)
     y += dp(12)
 
-    card(y, dp(164))
+    # SETUP
+    card(y, dp(160))
     cy = section(y + dp(14), "SETUP")
-    for label in ("1 \u00b7 Enable keyboard", "2 \u00b7 Choose keyboard"):
-        box = [x + dp(16), cy, W - x - dp(16), cy + dp(50)]
-        comp_round(img, box, dp(16),
-                   fill=(255, 255, 255, 58) if pal["dark"] else (255, 255, 255, 205),
-                   outline=(255, 255, 255, 107) if pal["dark"] else (255, 255, 255, 235),
-                   width=max(1, int(dp(1))))
-        comp_text(img, ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), label,
-                  font("Roboto-Medium", 16), ink, anchor="mm")
-        cy += dp(56)
-    y += dp(164) + dp(10)
+    cy = button(cy, "1 \u00b7 Enable keyboard")
+    button(cy, "2 \u00b7 Choose keyboard")
+    y += dp(160) + dp(10)
 
+    # TRY IT
     card(y, dp(120))
     cy = section(y + dp(14), "TRY IT")
-    field = [x + dp(16), cy, W - x - dp(16), cy + dp(74)]
+    field = [x + inner, cy, W - x - inner, cy + dp(74)]
     comp_round(img, field, dp(18),
                fill=(255, 255, 255, 26) if pal["dark"] else (255, 255, 255, 215),
                outline=(255, 255, 255, 64) if pal["dark"] else (255, 255, 255, 240),
@@ -601,29 +670,39 @@ def render_setup(name, pal):
               (255, 255, 255, 120) if pal["dark"] else (11, 18, 48, 110))
     y += dp(120) + dp(10)
 
-    card(y, dp(214))
-    cy = section(y + dp(14), "APPEARANCE")
-    for label, sel in (("Match system", False), ("Dark glass", True), ("Light glass", False)):
-        radio_row(cy, label, sel)
-        cy += dp(24)
-    cy = section(cy + dp(10), "KEY HEIGHT")
-    for label, sel in (("Small", False), ("Medium", True), ("Large", False)):
-        radio_row(cy, label, sel)
-        cy += dp(24)
-    y += dp(214) + dp(10)
+    # GLASS
+    card(y, dp(272))
+    cy = section(y + dp(14), "GLASS")
+    sx = x + inner
+    sw = W - 2 * x - 2 * inner
+    slider_block(img, sx, cy, sw, pal, "Transparency", "14%", 0.31)
+    slider_block(img, sx, cy + dp(56), sw, pal, "Frosting", "22 px", 0.44)
+    slider_block(img, sx, cy + dp(112), sw, pal, "Colour boost", "170%", 0.35)
+    switch_row(img, sx, cy + dp(168), sw, pal, "Floating colours", True)
+    y += dp(272) + dp(10)
 
-    card(y, dp(112))
-    cy = section(y + dp(14), "FEEDBACK")
-    for label in ("Key click sound", "Haptic tap", "Drifting colour orbs"):
-        radio_row(cy, label, True)
-        cy += dp(24)
+    # KEYBOARD
+    card(y, dp(216))
+    cy = section(y + dp(14), "KEYBOARD")
+    slider_block(img, sx, cy, sw, pal, "Key height", "52 px", 0.44)
+    slider_block(img, sx, cy + dp(56), sw, pal, "Space between keys", "6 px", 0.33)
+    switch_row(img, sx, cy + dp(112), sw, pal, "Glow on press", True)
+    y += dp(216) + dp(10)
+
+    # APPEARANCE
+    card(y, dp(296))
+    cy = section(y + dp(14), "APPEARANCE")
+    segment_row(img, sx, cy, sw, pal, ["Auto", "Light", "Dark"], 0)
+    slider_block(img, sx, cy + dp(58), sw, pal, "Bounce", "70%", 0.7)
+    switch_row(img, sx, cy + dp(114), sw, pal, "Key click sound", True)
+    switch_row(img, sx, cy + dp(160), sw, pal, "Haptic tap", True)
 
     img.convert("RGB").save(OUT + name, quality=95)
     print("wrote", name)
 
 
 compose("01-keyboard.png", DARK, ROWS["letters"], "Meet the glass keyboard",
-        press=(2, 4), blur_behind=True)
+        press=(2, 4))
 compose("02-shift.png", DARK, ROWS["letters"], "Hello there", press=(2, 3), shift_on=True)
 compose("03-numbers.png", DARK, ROWS["numbers"], "https://")
 compose("04-accent.png", DARK, ROWS["letters"], "caf", press=(2, 6),

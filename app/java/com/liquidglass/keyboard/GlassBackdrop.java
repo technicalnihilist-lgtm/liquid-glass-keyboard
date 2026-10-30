@@ -51,8 +51,10 @@ public class GlassBackdrop extends View {
                 Shader.TileMode.CLAMP));
         canvas.drawRect(0f, 0f, w, h, p);
 
+        if (!pal.orbs) return;
+
         float m = Math.max(w, h);
-        float k = pal.dark ? 1f : 0.6f;
+        float k = (pal.dark ? 1f : 0.6f) * pal.orbBoost;
         orb(canvas, w * 0.02f, h * 0.00f, m * 0.64f, pal.orb1, 0.58f * k);
         orb(canvas, w * 1.00f, h * 0.22f, m * 0.56f, pal.orb2, 0.50f * k);
         orb(canvas, w * 0.05f, h * 1.02f, m * 0.60f, pal.orb3, 0.44f * k);

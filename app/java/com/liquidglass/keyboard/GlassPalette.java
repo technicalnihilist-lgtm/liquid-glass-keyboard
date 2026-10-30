@@ -1,5 +1,5 @@
 /*
- * Liquid Glass Keyboard — generation 2
+ * Liquid Glass Keyboard — generation 3
  * Copyright (c) 2026 Liquid Glass Keyboard contributors
  *
  * Released under the MIT License. See the LICENSE file in the project root
@@ -8,11 +8,11 @@
 package com.liquidglass.keyboard;
 
 import android.content.Context;
-import android.content.res.Configuration;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Color;
 
-/** Colour tokens for the liquid-glass look, second generation. */
+/** Colour tokens plus the live glass tuning read from preferences. */
 public final class GlassPalette {
 
     public static final String PREFS = "liquid_glass_keyboard";
@@ -29,56 +29,72 @@ public final class GlassPalette {
     /** Plate (the sheet the keys sit on). */
     public final int kbTop, kbMid, kbBot, kbEdge, kbSpec;
 
-    private GlassPalette(boolean dark) {
+    /** Live tuning. */
+    public final float alphaScale;   // glass opacity multiplier
+    public final int gapDp;
+    public final int keyHeightDp;
+    public final int blurDp;
+    public final float orbBoost;     // saturation as a multiplier on orb alpha
+    public final float bounce;       // 0..1, how far a key sinks when pressed
+    public final boolean glow;
+    public final boolean orbs;
+
+    private GlassPalette(boolean dark, float alphaScale, int gapDp, int keyHeightDp,
+                         int blurDp, float orbBoost, float bounce, boolean glow, boolean orbs) {
         this.dark = dark;
+        this.alphaScale = alphaScale;
+        this.gapDp = gapDp;
+        this.keyHeightDp = keyHeightDp;
+        this.blurDp = blurDp;
+        this.orbBoost = orbBoost;
+        this.bounce = bounce;
+        this.glow = glow;
+        this.orbs = orbs;
+
         orb1 = 0xFF2B6BFF;
         orb2 = 0xFFFF3EA5;
         orb3 = 0xFF19E0C0;
         orb4 = 0xFFFFB02E;
+
+        int kt, km, kb, krt, krb, ke, ks, pt, pm, pb, pe, ps;
         if (dark) {
             bg1 = 0xFF050A22;
             bg2 = 0xFF1B0733;
             ink = 0xFFFFFFFF;
             inkDim = 0x8CFFFFFF;
-
-            keyTop = 0x5CFFFFFF;
-            keyMid = 0x17FFFFFF;
-            keyBot = 0x07FFFFFF;
-            keyRimTop = 0xC7FFFFFF;
-            keyRimBot = 0x10FFFFFF;
-            keyEdge = 0x70FFFFFF;
-            keySpec = 0xD9FFFFFF;
-
-            kbTop = 0x2BFFFFFF;
-            kbMid = 0x12FFFFFF;
-            kbBot = 0x05FFFFFF;
-            kbEdge = 0x52FFFFFF;
-            kbSpec = 0x99FFFFFF;
+            kt = 0x5CFFFFFF; km = 0x17FFFFFF; kb = 0x07FFFFFF;
+            krt = 0xC7FFFFFF; krb = 0x10FFFFFF; ke = 0x70FFFFFF; ks = 0xD9FFFFFF;
+            pt = 0x2BFFFFFF; pm = 0x12FFFFFF; pb = 0x05FFFFFF;
+            pe = 0x52FFFFFF; ps = 0x99FFFFFF;
         } else {
             bg1 = 0xFFC6D9FF;
             bg2 = 0xFFF7D9F6;
             ink = 0xFF0B1230;
             inkDim = 0x8C0B1230;
-
-            keyTop = 0xE0FFFFFF;
-            keyMid = 0xA8FFFFFF;
-            keyBot = 0x5CFFFFFF;
-            keyRimTop = 0xFFFFFFFF;
-            keyRimBot = 0x2EFFFFFF;
-            keyEdge = 0xEBFFFFFF;
-            keySpec = 0xFFFFFFFF;
-
-            kbTop = 0x47FFFFFF;
-            kbMid = 0x21FFFFFF;
-            kbBot = 0x0FFFFFFF;
-            kbEdge = 0x5CFFFFFF;
-            kbSpec = 0xFFFFFFFF;
+            kt = 0xE0FFFFFF; km = 0xA8FFFFFF; kb = 0x5CFFFFFF;
+            krt = 0xFFFFFFFF; krb = 0x2EFFFFFF; ke = 0xEBFFFFFF; ks = 0xFFFFFFFF;
+            pt = 0x47FFFFFF; pm = 0x21FFFFFF; pb = 0x0FFFFFFF;
+            pe = 0x5CFFFFFF; ps = 0xFFFFFFFF;
         }
+
+        keyTop = scaleAlpha(kt, alphaScale);
+        keyMid = scaleAlpha(km, alphaScale);
+        keyBot = scaleAlpha(kb, alphaScale);
+        keyRimTop = scaleAlpha(krt, alphaScale);
+        keyRimBot = scaleAlpha(krb, alphaScale);
+        keyEdge = scaleAlpha(ke, Math.min(1f, 0.35f + alphaScale * 0.65f));
+        keySpec = scaleAlpha(ks, Math.min(1f, 0.5f + alphaScale * 0.5f));
+
+        kbTop = scaleAlpha(pt, alphaScale);
+        kbMid = scaleAlpha(pm, alphaScale);
+        kbBot = scaleAlpha(pb, alphaScale);
+        kbEdge = scaleAlpha(pe, Math.min(1f, 0.4f + alphaScale * 0.6f));
+        kbSpec = scaleAlpha(ps, Math.min(1f, 0.5f + alphaScale * 0.5f));
     }
 
     public static GlassPalette resolve(Context c) {
         SharedPreferences sp = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        String t = sp.getString("theme", "system");
+        String t = sp.getString("theme", "auto");
         boolean dark;
         if ("dark".equals(t)) {
             dark = true;
@@ -88,7 +104,21 @@ public final class GlassPalette {
             dark = (c.getResources().getConfiguration().uiMode
                     & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         }
-        return new GlassPalette(dark);
+
+        int a = sp.getInt("glass_a", 14);            // 0..45 percent
+        int gap = sp.getInt("gap", 6);               // 2..14 dp
+        int kh = sp.getInt("kh", 52);                // 38..70 dp
+        int blur = sp.getInt("blur", 22);            // 0..50 dp
+        int sat = sp.getInt("sat", 170);             // 100..300 percent
+        int bnc = sp.getInt("bounce", 70);           // 0..100
+
+        return new GlassPalette(dark,
+                Math.max(0f, a) / 14f,
+                gap, kh, blur,
+                Math.max(0.2f, sat / 170f),
+                Math.max(0f, Math.min(1f, bnc / 100f)),
+                sp.getBoolean("glow", true),
+                sp.getBoolean("orbs", true));
     }
 
     public static boolean soundOn(Context c) {
@@ -99,16 +129,9 @@ public final class GlassPalette {
         return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("haptics", true);
     }
 
+    /** Kept for older callers: the orbs switch replaced the motion switch. */
     public static boolean motionOn(Context c) {
-        return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("motion", true);
-    }
-
-    /** Key height in dp. */
-    public static int keyHeightDp(Context c) {
-        String s = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("keysize", "medium");
-        if ("small".equals(s)) return 46;
-        if ("large".equals(s)) return 58;
-        return 52;
+        return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("orbs", true);
     }
 
     /** HSL to ARGB. h in degrees, s and l in 0..1. */

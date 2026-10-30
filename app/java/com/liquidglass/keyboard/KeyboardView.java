@@ -98,13 +98,13 @@ public class KeyboardView extends View {
     }
 
     private void initMetrics() {
-        gap = dp(6);
+        gap = dp(pal != null ? pal.gapDp : 6);
         sidePad = dp(6);
         band = dp(44);
         platePadTop = dp(10);
         platePadBot = dp(9);
         kbCorner = dp(30);
-        kh = dp(GlassPalette.keyHeightDp(getContext()));
+        kh = dp(pal != null ? pal.keyHeightDp : 52);
     }
 
     private int dp(float v) {
@@ -419,12 +419,13 @@ public class KeyboardView extends View {
                 GlassPalette.scaleAlpha(pal.bg2, veil), Shader.TileMode.CLAMP));
         canvas.drawRect(0, 0, w, h, p);
 
-        float phase = (motion && attachedVisible) ? (now - driftStart) / 1000f : 0f;
+        float phase = (motion && attachedVisible && pal.orbs) ? (now - driftStart) / 1000f : 0f;
         float dx = (float) Math.sin(phase * 0.32f) * dp(16);
         float dy = (float) Math.cos(phase * 0.24f) * dp(11);
         float m = Math.max(w, h);
-        float k = (pal.dark ? 1f : 0.6f) * (blurBackdrop ? 0.55f : 1f);
+        float k = (pal.dark ? 1f : 0.6f) * (blurBackdrop ? 0.55f : 1f) * pal.orbBoost;
 
+        if (!pal.orbs) { k = 0f; }
         orb(canvas, w * 0.02f + dx, h * 0.00f + dy, m * 0.64f, pal.orb1, 0.58f * k);
         orb(canvas, w * 1.00f - dx * 0.6f, h * 0.22f - dy, m * 0.56f, pal.orb2, 0.5f * k);
         orb(canvas, w * 0.05f - dx * 0.4f, h * 1.02f + dy * 0.5f, m * 0.6f, pal.orb3, 0.44f * k);
@@ -444,7 +445,7 @@ public class KeyboardView extends View {
     }
 
     private void drawFlare(Canvas canvas, long now) {
-        if (activeKey == null) return;
+        if (activeKey == null || !pal.glow) return;
         float t = (now - pressTime) / 720f;
         if (t < 0f || t > 1f) return;
         float r = dp(70) * (0.5f + 1.5f * t);
@@ -492,49 +493,61 @@ public class KeyboardView extends View {
     }
 
     private void drawPressedOverlay(Canvas canvas, RectF r, float intensity, float rad) {
+        // The mock scales a pressed key to 0.86; here the key body lives in the
+        // baked bitmap, so the pressed treatment is drawn inset by the same
+        // amount and reads as the key sinking under the finger.
+        float sink = 0.14f * (pal != null ? pal.bounce : 0.7f) * intensity;
+        RectF k = new RectF(r);
+        k.inset(k.width() * sink / 2f, k.height() * sink / 2f);
+        float kr = rad * (1f - sink);
+
         canvas.save();
         Path cp = new Path();
-        cp.addRoundRect(r, rad, rad, Path.Direction.CW);
+        cp.addRoundRect(k, kr, kr, Path.Direction.CW);
         canvas.clipPath(cp);
 
         Paint tint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        tint.setShader(new LinearGradient(0, r.top, 0, r.bottom,
+        tint.setShader(new LinearGradient(0, k.top, 0, k.bottom,
                 GlassPalette.hsl(hue, 1f, 0.92f, Math.round(120 * intensity)),
                 GlassPalette.hsl(hue, 1f, 0.62f, Math.round(55 * intensity)),
                 Shader.TileMode.CLAMP));
-        canvas.drawRoundRect(r, rad, rad, tint);
+        canvas.drawRoundRect(k, kr, kr, tint);
 
-        Paint bloom = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bloom.setShader(new RadialGradient(pressX, pressY,
-                Math.max(dp(12), r.width() * 1.05f),
-                GlassPalette.hsl(hue, 1f, 0.97f, Math.round(150 * intensity)),
-                GlassPalette.hsl(hue, 1f, 0.82f, 0), Shader.TileMode.CLAMP));
-        canvas.drawRect(r, bloom);
+        if (pal.glow) {
+            Paint bloom = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bloom.setShader(new RadialGradient(pressX, pressY,
+                    Math.max(dp(12), k.width() * 1.05f),
+                    GlassPalette.hsl(hue, 1f, 0.97f, Math.round(150 * intensity)),
+                    GlassPalette.hsl(hue, 1f, 0.82f, 0), Shader.TileMode.CLAMP));
+            canvas.drawRect(k, bloom);
+        }
         canvas.restore();
 
-        Paint g = new Paint(Paint.ANTI_ALIAS_FLAG);
-        g.setStyle(Paint.Style.STROKE);
-        g.setStrokeWidth(dp(1.2f));
-        for (int i = 0; i < 3; i++) {
-            float spread = dp(1.5f + i * 5f) * intensity;
-            g.setColor(GlassPalette.hsl(hue, 1f, 0.74f,
-                    Math.round(140 * intensity / (i + 1.4f))));
-            canvas.drawRoundRect(new RectF(r.left - spread, r.top - spread,
-                    r.right + spread, r.bottom + spread), rad + spread, rad + spread, g);
+        if (pal.glow) {
+            Paint g = new Paint(Paint.ANTI_ALIAS_FLAG);
+            g.setStyle(Paint.Style.STROKE);
+            g.setStrokeWidth(dp(1.2f));
+            for (int i = 0; i < 3; i++) {
+                float spread = dp(1.5f + i * 5f) * intensity;
+                g.setColor(GlassPalette.hsl(hue, 1f, 0.74f,
+                        Math.round(140 * intensity / (i + 1.4f))));
+                canvas.drawRoundRect(new RectF(k.left - spread, k.top - spread,
+                        k.right + spread, k.bottom + spread), kr + spread, kr + spread, g);
+            }
         }
 
         Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(dp(1.2f));
         rim.setColor(GlassPalette.hsl(hue, 1f, 0.86f, Math.round(245 * intensity)));
-        canvas.drawRoundRect(r, rad, rad, rim);
+        canvas.drawRoundRect(k, kr, kr, rim);
 
         Paint spec = new Paint(Paint.ANTI_ALIAS_FLAG);
         spec.setColor(GlassPalette.hsl(hue, 1f, 1f, Math.round(200 * intensity)));
         spec.setStrokeWidth(dp(1.3f));
         spec.setStrokeCap(Paint.Cap.ROUND);
-        float inset = rad * 1.15f;
-        canvas.drawLine(r.left + inset, r.top + dp(2f), r.right - inset, r.top + dp(2f), spec);
+        float inset = kr * 1.15f;
+        canvas.drawLine(k.left + inset, k.top + dp(2f), k.right - inset, k.top + dp(2f), spec);
     }
 
     private String labelFor(Key k) {

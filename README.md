@@ -16,7 +16,7 @@ glassy, colour-shifting keypad. Fully offline: the APK requests no internet perm
 ## Download
 
 **[LiquidGlassKeyboard.apk](https://github.com/technicalnihilist-lgtm/liquid-glass-keyboard/releases/latest/download/LiquidGlassKeyboard.apk)**
-— 182 KB, signed, `minSdk 21` (Android 5.0+), `targetSdk 34`. The same file also sits in the repo
+— 186 KB, signed, `minSdk 21` (Android 5.0+), `targetSdk 34`. The same file also sits in the repo
 root as `LiquidGlassKeyboard.apk`.
 
 Verify the download before installing:
@@ -63,7 +63,24 @@ for what changed when, and [SECURITY.md](SECURITY.md) to report a problem privat
 F-Droid metadata lives in `fastlane/metadata/android/`, so listing the app there needs no extra
 work beyond F-Droid's own build recipe.
 
-## Generation 2 — what changed
+## Generation 3 — tune the glass
+
+The third design pass hands the material over to you. The setup screen now carries the same
+controls the mock-up had, wired to the real renderer:
+
+- **Transparency** (0–45%) scales every glass alpha — at zero you are left with rims and text on a
+  bare backdrop.
+- **Frosting** (0–50 px) sets the radius of the real window blur on Android 12+; at 0 the board
+  drops its own paint to nothing and sits on an unblurred app.
+- **Colour boost** (100–300%) scales the alpha of the drifting orbs.
+- **Floating colours** switches the orbs off entirely.
+- **Key height** (38–70 px) and **space between keys** (2–14 px) are sliders now, not presets.
+- **Glow on press** turns the flare, bloom and halo off, leaving only the tint and the rim.
+- **Bounce** (0–100%) controls how far a key sinks under your finger — up to 14% — and how long
+  the flash lasts.
+- **Auto / Light / Dark** segmented control, and a reset button that restores every default.
+
+## Generation 2 — layered glass
 
 Version 1 drew each key as a single translucent gradient. Version 2 builds every key out of
 layers, the way real glass behaves:

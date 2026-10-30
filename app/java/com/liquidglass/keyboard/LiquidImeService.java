@@ -47,17 +47,18 @@ public class LiquidImeService extends InputMethodService implements KeyboardView
      * its own painted backdrop, so nothing breaks.
      */
     private void applyBackdropBlur() {
+        GlassPalette pal = GlassPalette.resolve(this);
         boolean applied = false;
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 Window window = getWindow() == null ? null : getWindow().getWindow();
-                if (window != null) {
+                if (window != null && pal.blurDp > 0) {
                     WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
                     if (wm == null || wm.isCrossWindowBlurEnabled()) {
                         WindowManager.LayoutParams lp = window.getAttributes();
                         lp.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
                         lp.setBlurBehindRadius(
-                                (int) (26 * getResources().getDisplayMetrics().density));
+                                (int) (pal.blurDp * getResources().getDisplayMetrics().density));
                         window.setAttributes(lp);
                         applied = true;
                     }

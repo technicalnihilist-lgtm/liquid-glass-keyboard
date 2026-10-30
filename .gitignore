@@ -7,3 +7,6 @@ local.properties
 *.keystore
 *.apk.idsig
 *.apk.idsig
+
+# generated store assets — rebuild with tools/make_store_assets.py
+store/
