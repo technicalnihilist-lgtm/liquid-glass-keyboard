@@ -1,0 +1,1 @@
+Layout maths pass: the key grid is measured once and reused instead of every frame, touch rows are found arithmetically, and the board re-measures when key height or gap changes. Fixes accent strips running off the left edge and bottom rows clipping in short windows. No visual change.
