@@ -64,6 +64,15 @@ public class KeyboardView extends View {
     private List<List<Key>> rows = new ArrayList<List<Key>>();
     private final List<List<RectF>> rects = new ArrayList<List<RectF>>();
 
+    // Cached geometry. The key grid only changes when the width, the row set, the key
+    // height or the gap changes, so it is rebuilt on demand instead of on every frame
+    // and on every touch. contentTop and pitch describe the same grid arithmetically.
+    private boolean layoutDirty = true;
+    private int layoutW = -1, layoutHk = -1, layoutGap = -1;
+    private int contentTop, pitch;
+    private Path clipPath;
+    private int clipW = -1, clipH = -1;
+
     private Key activeKey;
     private int activeRow = -1, activeCol = -1;
     private long pressTime;
@@ -119,9 +128,14 @@ public class KeyboardView extends View {
 
     public void setPalette(GlassPalette p) {
         pal = p;
+        int oldKh = kh, oldGap = gap;
         initMetrics();
         motion = GlassPalette.motionOn(getContext());
         baseDirty = true;
+        layoutDirty = true;
+        // A new key height or gap changes the board's measured height: re-measure
+        // instead of keeping the height the view was first given.
+        if (oldKh != kh || oldGap != gap) requestLayout();
         invalidate();
     }
 
@@ -140,6 +154,7 @@ public class KeyboardView extends View {
     }
 
     public void reset(boolean autoShift) {
+        cancelPending();
         page = KeyboardLayout.LETTERS;
         rows = KeyboardLayout.rows(page);
         shift = autoShift;
@@ -147,9 +162,11 @@ public class KeyboardView extends View {
         activeKey = null;
         down = false;
         altActive = false;
+        altIndex = -1;
         altList.clear();
         altRects.clear();
         baseDirty = true;
+        layoutDirty = true;
         requestLayout();
         invalidate();
     }
@@ -171,13 +188,20 @@ public class KeyboardView extends View {
         int hk = currentKeyHeight();
         int n = Math.max(1, rows.size());
         int h = band + platePadTop + n * hk + (n - 1) * gap + platePadBot;
-        setMeasuredDimension(w, h);
+        // Never claim more height than the window offers, or the bottom rows get
+        // clipped by the IME window instead of the board being cut where it fits.
+        if (MeasureSpec.getMode(heightSpec) != MeasureSpec.UNSPECIFIED) {
+            int limit = MeasureSpec.getSize(heightSpec);
+            if (limit > 0 && h > limit) h = limit;
+        }
+        setMeasuredDimension(w, Math.max(0, h));
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int ow, int oh) {
         super.onSizeChanged(w, h, ow, oh);
         baseDirty = true;
+        layoutDirty = true;
     }
 
     @Override
@@ -190,40 +214,82 @@ public class KeyboardView extends View {
         }
     }
 
+    /** Rebuild the key grid only when something that shapes it actually changed. */
     private void layoutKeys() {
-        rects.clear();
-        float avail = getWidth() - 2f * sidePad;
-        float y = band + platePadTop;
+        int w = getWidth();
         int hk = currentKeyHeight();
-        for (int r = 0; r < rows.size(); r++) {
+        int n = rows.size();
+        if (!layoutDirty && layoutW == w && layoutHk == hk && layoutGap == gap
+                && rects.size() == n) {
+            return;
+        }
+        layoutW = w;
+        layoutHk = hk;
+        layoutGap = gap;
+        layoutDirty = false;
+
+        rects.clear();
+        float avail = Math.max(0f, w - 2f * sidePad);
+        contentTop = band + platePadTop;
+        pitch = hk + gap;
+        float y = contentTop;
+        for (int r = 0; r < n; r++) {
             List<Key> row = rows.get(r);
+            int count = row.size();
             float sum = 0f;
-            for (Key k : row) sum += k.weight;
-            float gaps = gap * Math.max(0, row.size() - 1);
-            float unit = (avail - gaps) / Math.max(0.0001f, sum);
+            for (int i = 0; i < count; i++) sum += row.get(i).weight;
+            if (sum <= 0f) sum = Math.max(1f, count);
+            float gaps = gap * Math.max(0, count - 1);
+            float unit = Math.max(0f, (avail - gaps) / sum);
             float x = sidePad;
-            List<RectF> rr = new ArrayList<RectF>();
-            for (Key k : row) {
-                float kw = unit * k.weight;
+            float right = sidePad + avail;
+            List<RectF> rr = new ArrayList<RectF>(count);
+            for (int i = 0; i < count; i++) {
+                Key k = row.get(i);
+                float kw = Math.max(0f, unit * k.weight);
+                if (i == count - 1) {
+                    // The last key takes up the sub-pixel drift of the sum so the row
+                    // ends exactly on the right margin instead of leaving a hairline.
+                    kw = Math.max(0f, right - x);
+                }
                 rr.add(new RectF(x, y, x + kw, y + hk));
                 x += kw + gap;
             }
             rects.add(rr);
-            y += hk + gap;
+            y += pitch;
         }
     }
 
+    /** The rect of one key, or null when the cached grid does not cover it. */
+    private RectF keyRect(int r, int c) {
+        if (r < 0 || r >= rects.size()) return null;
+        List<RectF> row = rects.get(r);
+        if (c < 0 || c >= row.size()) return null;
+        return row.get(c);
+    }
+
+    /** Rows sit on a uniform pitch, so the row under y is arithmetic, not a scan. */
     private int rowAt(float y) {
-        for (int r = 0; r < rects.size(); r++) {
-            List<RectF> row = rects.get(r);
-            if (!row.isEmpty() && y >= row.get(0).top - gap / 2f && y <= row.get(0).bottom + gap / 2f) {
-                return r;
-            }
+        int n = rects.size();
+        if (n <= 0 || pitch <= 0) return -1;
+        int r = (int) Math.floor((y - contentTop + gap / 2f) / pitch);
+        if (r >= n) r = n - 1;
+        if (r < 0) return -1;
+        // The old scan took the first row whose band covered y, so at the exact point
+        // where two bands meet it picked the upper one. Keep that: step back when the
+        // touch is still inside the row above.
+        if (r > 0) {
+            RectF prev = keyRect(r - 1, 0);
+            if (prev != null && y <= prev.bottom + gap / 2f) r--;
         }
-        return -1;
+        RectF b = keyRect(r, 0);
+        if (b == null) return -1;
+        if (y < b.top - gap / 2f || y > b.bottom + gap / 2f) return -1;
+        return r;
     }
 
     private int colAt(int r, float x) {
+        if (r < 0 || r >= rects.size()) return -1;
         List<RectF> row = rects.get(r);
         for (int c = 0; c < row.size(); c++) {
             RectF b = row.get(c);
@@ -389,9 +455,14 @@ public class KeyboardView extends View {
         if (intensity <= 0f) activeKey = null;
 
         canvas.save();
-        Path clip = new Path();
-        clip.addRoundRect(new RectF(0, 0, w, h + kbCorner), kbCorner, kbCorner, Path.Direction.CW);
-        canvas.clipPath(clip);
+        if (clipPath == null || clipW != (int) w || clipH != (int) h) {
+            clipPath = new Path();
+            clipPath.addRoundRect(new RectF(0, 0, w, h + kbCorner), kbCorner, kbCorner,
+                    Path.Direction.CW);
+            clipW = (int) w;
+            clipH = (int) h;
+        }
+        canvas.clipPath(clipPath);
 
         drawBackdrop(canvas, now);
         drawFlare(canvas, now);
@@ -606,10 +677,10 @@ public class KeyboardView extends View {
                 if (pal.dark) {
                     tx.setShadowLayer(dp(2.2f), 0f, dp(0.8f), 0x40000000);
                 }
-                float maxW = box.width() - dp(10);
+                float maxW = Math.max(dp(1), box.width() - dp(10));
                 float tw = tx.measureText(label);
                 if (tw > maxW && tw > 0) {
-                    tx.setTextSize(size * (maxW / tw));
+                    tx.setTextSize(Math.max(dp(1), size * (maxW / tw)));
                 }
                 Paint.FontMetrics fm = tx.getFontMetrics();
                 float baseline = box.centerY() - (fm.ascent + fm.descent) / 2f;
@@ -688,9 +759,8 @@ public class KeyboardView extends View {
     private void drawPreview(Canvas canvas) {
         if (!down || altActive || activeKey == null) return;
         if (activeKey.type != Key.NORMAL) return;
-        if (activeRow < 0 || activeRow >= rects.size()) return;
-        if (activeCol < 0 || activeCol >= rects.get(activeRow).size()) return;
-        RectF kr = rects.get(activeRow).get(activeCol);
+        RectF kr = keyRect(activeRow, activeCol);
+        if (kr == null) return;
         float bw = kr.width() * 1.2f;
         float bh = currentKeyHeight() * 1.15f;
         float cx = Math.max(bw / 2f + dp(2), Math.min(getWidth() - bw / 2f - dp(2), kr.centerX()));
@@ -816,8 +886,8 @@ public class KeyboardView extends View {
             return;
         }
         if (!down || activeKey == null) return;
-        if (activeRow < 0 || activeRow >= rects.size()) return;
-        RectF kr = rects.get(activeRow).get(activeCol);
+        RectF kr = keyRect(activeRow, activeCol);
+        if (kr == null) return;
         if (e.getY() < kr.top - kr.height() * 1.1f || e.getY() > kr.bottom + kr.height() * 1.1f) {
             cancelPress();
         }
@@ -877,16 +947,25 @@ public class KeyboardView extends View {
 
     private void buildAltRects() {
         altRects.clear();
-        if (activeRow < 0 || activeRow >= rects.size()) return;
-        RectF kr = rects.get(activeRow).get(activeCol);
+        RectF kr = keyRect(activeRow, activeCol);
+        int n = altList.size();
+        if (kr == null || n <= 0) return;
+        float g = dp(3);
         float bw = dp(44);
         float bh = currentKeyHeight() * 0.95f;
-        float g = dp(3);
-        int n = altList.size();
         float total = n * bw + (n - 1) * g;
+        // If the strip is wider than the screen the old code pushed it off the left
+        // edge; shrink the bubbles instead so every alternate stays reachable.
+        float limit = Math.max(0f, getWidth() - dp(8));
+        if (total > limit && n > 0) {
+            bw = Math.max(dp(18), (limit - (n - 1) * g) / n);
+            total = n * bw + (n - 1) * g;
+        }
         float x = kr.centerX() - total / 2f;
-        if (x < dp(4)) x = dp(4);
-        if (x + total > getWidth() - dp(4)) x = getWidth() - dp(4) - total;
+        float minX = dp(4);
+        float maxX = Math.max(minX, getWidth() - dp(4) - total);
+        if (x < minX) x = minX;
+        if (x > maxX) x = maxX;
         float y = kr.top - bh - dp(8);
         if (y < dp(2)) y = dp(2);
         for (int i = 0; i < n; i++) {
@@ -950,11 +1029,13 @@ public class KeyboardView extends View {
         else if ("emo".equals(name)) p = KeyboardLayout.EMOJI;
         else p = KeyboardLayout.LETTERS;
         if (p == page) return;
+        cancelPending();
         page = p;
         rows = KeyboardLayout.rows(page);
         activeKey = null;
         down = false;
         altActive = false;
+        altIndex = -1;
         altList.clear();
         altRects.clear();
         if (page != KeyboardLayout.LETTERS) {
@@ -962,8 +1043,18 @@ public class KeyboardView extends View {
             caps = false;
         }
         baseDirty = true;
+        layoutDirty = true;
         requestLayout();
         invalidate();
+    }
+
+    /** Drop any queued long-press or key-repeat so it cannot fire on a stale grid. */
+    private void cancelPending() {
+        if (longPressRun != null) {
+            handler.removeCallbacks(longPressRun);
+            longPressRun = null;
+        }
+        stopRepeat();
     }
 
     private void feedback() {
