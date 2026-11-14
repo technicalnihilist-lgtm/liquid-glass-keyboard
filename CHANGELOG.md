@@ -4,6 +4,38 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] — 2026-11-14
+
+Layout maths: the key grid is computed once and reused, and every place it can go
+wrong now has a bound. No visible change — the key rects are bit-for-bit identical
+to 3.0.0 at every density, gap and key height.
+
+### Changed
+- The key grid is cached and rebuilt only when the width, the page, the key height or
+  the gap changes, instead of on every frame and on every touch. Saves one allocation
+  of the whole board's rects per draw and per `ACTION_DOWN`.
+- The row under a touch is found arithmetically from the uniform row pitch rather than
+  by scanning every row. Hit areas are unchanged, including the half-gap slop between
+  rows and the exact points where two bands meet.
+- Each row's last key absorbs the sub-pixel drift of the weight sum, so a row ends
+  exactly on the right margin instead of a hairline short of it.
+- The clip path used by `onDraw` is cached per size rather than rebuilt every frame.
+
+### Fixed
+- Changing key height or key gap while the keyboard was open left the board at its old
+  measured height, clipping the bottom rows; the view now re-measures.
+- The keyboard never claims more height than the IME window offers, so a short window
+  no longer reports a height it cannot fill.
+- An accent strip wider than the screen (seven alternates on a narrow display) was
+  positioned at a negative x and ran off the left edge; the bubbles now shrink to fit
+  and the strip is clamped to both margins.
+- Key-rect lookups are bounds-checked through one accessor, so a stale row/column index
+  from a pending long-press or repeat can no longer throw `IndexOutOfBoundsException`.
+- Pending long-press and key-repeat callbacks are cancelled when the page changes or
+  the board resets, so a held backspace cannot keep deleting into a new input field.
+- Label autoshrink is floored at 1 px, so an extreme gap/key-height combination can no
+  longer compute a negative text size.
+
 ## [3.0.0] — 2026-10-30
 
 The glass is now yours to tune, following the third design pass.
