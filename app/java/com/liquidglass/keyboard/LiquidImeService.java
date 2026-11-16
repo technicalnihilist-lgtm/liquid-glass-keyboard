@@ -26,8 +26,9 @@ public class LiquidImeService extends InputMethodService implements KeyboardView
     public View onCreateInputView() {
         keyboard = new KeyboardView(this);
         keyboard.setListener(this);
-        keyboard.setPalette(GlassPalette.resolve(this));
-        applyBackdropBlur();
+        GlassPalette pal = GlassPalette.resolve(this);
+        keyboard.setPalette(pal);
+        applyBackdropBlur(pal);
         return keyboard;
     }
 
@@ -35,10 +36,13 @@ public class LiquidImeService extends InputMethodService implements KeyboardView
     public void onStartInputView(EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
         if (keyboard == null) return;
-        keyboard.setPalette(GlassPalette.resolve(this));
+        // Resolve once per show instead of three times: each resolve reads the
+        // preference file, and this runs every time the keyboard comes up.
+        GlassPalette pal = GlassPalette.resolve(this);
+        keyboard.setPalette(pal);
         keyboard.reset(shouldAutoShift(info));
         keyboard.setEnterLabel(enterLabelFor(info));
-        applyBackdropBlur();
+        applyBackdropBlur(pal);
     }
 
     /**
@@ -46,8 +50,7 @@ public class LiquidImeService extends InputMethodService implements KeyboardView
      * Android 12+ where cross-window blur is enabled; everywhere else the board keeps
      * its own painted backdrop, so nothing breaks.
      */
-    private void applyBackdropBlur() {
-        GlassPalette pal = GlassPalette.resolve(this);
+    private void applyBackdropBlur(GlassPalette pal) {
         boolean applied = false;
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -55,11 +58,19 @@ public class LiquidImeService extends InputMethodService implements KeyboardView
                 if (window != null && pal.blurDp > 0) {
                     WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
                     if (wm == null || wm.isCrossWindowBlurEnabled()) {
+                        int radius = (int) (pal.blurDp
+                                * getResources().getDisplayMetrics().density);
                         WindowManager.LayoutParams lp = window.getAttributes();
-                        lp.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
-                        lp.setBlurBehindRadius(
-                                (int) (pal.blurDp * getResources().getDisplayMetrics().density));
-                        window.setAttributes(lp);
+                        // Setting the attributes relayouts the IME window, so only do
+                        // it when the radius really changed; a show used to do it always.
+                        boolean changed = (lp.flags
+                                & WindowManager.LayoutParams.FLAG_BLUR_BEHIND) == 0
+                                || lp.getBlurBehindRadius() != radius;
+                        if (changed) {
+                            lp.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
+                            lp.setBlurBehindRadius(radius);
+                            window.setAttributes(lp);
+                        }
                         applied = true;
                     }
                 }

@@ -39,9 +39,10 @@ public class GlassBackdrop extends View {
     protected void onDraw(Canvas canvas) {
         if (pal == null) pal = GlassPalette.resolve(getContext());
         draw(canvas, getWidth(), getHeight(), pal);
-        if (GlassPalette.motionOn(getContext()) && isShown()) {
-            postInvalidateDelayed(90);
-        }
+        // This backdrop takes no time input: given a size and a palette it paints the
+        // same pixels every time. The old 90 ms repaint loop therefore burned CPU and
+        // GPU for the whole time the setup screen was open, to redraw an identical
+        // image; the view now redraws on layout, palette and visibility changes only.
     }
 
     public static void draw(Canvas canvas, float w, float h, GlassPalette pal) {

@@ -86,8 +86,32 @@ public class KeyboardView extends View {
 
     private String enterLabel = "return";
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private Runnable longPressRun;
-    private Runnable repeatRun;
+    // One runnable per timer role, created once and reused. A long session presses
+    // thousands of keys, and this used to allocate a fresh runnable for every press.
+    private final Runnable longPressRun = new Runnable() {
+        @Override
+        public void run() {
+            if (activeKey == null || activeKey.alts == null) return;
+            altList.clear();
+            boolean upper = page == KeyboardLayout.LETTERS && (shift || caps);
+            for (String a : activeKey.alts) {
+                altList.add(upper ? a.toUpperCase() : a);
+            }
+            buildAltRects();
+            altActive = true;
+            altIndex = -1;
+            invalidate();
+        }
+    };
+    private final Runnable repeatRun = new Runnable() {
+        @Override
+        public void run() {
+            // A tick that outlived its press must not keep deleting into a new field.
+            if (!down) return;
+            if (listener != null) listener.onBackspace();
+            handler.postDelayed(this, REPEAT_EVERY_MS);
+        }
+    };
 
     private Bitmap base;                  // the static glass: plate + key bodies
     private boolean baseDirty = true;
@@ -95,6 +119,27 @@ public class KeyboardView extends View {
     private boolean motion = true;
     private boolean attachedVisible;
     private long driftStart = SystemClock.uptimeMillis();
+
+    // Scratch paint and geometry reused on every frame. Each use resets whatever it
+    // sets, so nothing leaks from one key or one frame into the next. A soak run
+    // draws tens of thousands of frames and used to allocate a Paint, a Typeface
+    // lookup and a FontMetrics for every key of every frame.
+    private static final Typeface LABEL_FACE =
+            Typeface.create("sans-serif-medium", Typeface.NORMAL);
+    private final Paint bgPaint = new Paint();
+    private final Paint orbPaint = new Paint();
+    private final Paint flarePaint = new Paint();
+    private final Paint labelPaint = new Paint();
+    private final Paint litPaint = new Paint();
+    private final Paint litRimPaint = new Paint();
+    private final Paint pressTintPaint = new Paint();
+    private final Paint pressBloomPaint = new Paint();
+    private final Paint pressGlowPaint = new Paint();
+    private final Paint pressRimPaint = new Paint();
+    private final Paint pressSpecPaint = new Paint();
+    private final Path tmpPath = new Path();
+    private final RectF tmpRect = new RectF();
+    private final Paint.FontMetrics fmScratch = new Paint.FontMetrics();
 
     public KeyboardView(Context c) {
         super(c);
@@ -127,11 +172,17 @@ public class KeyboardView extends View {
     }
 
     public void setPalette(GlassPalette p) {
+        // Rebake only when the glass itself changed. onStartInputView resolves the
+        // palette on every show and this used to force a full-window bitmap rebuild
+        // even when the settings were identical.
+        boolean reglass = pal == null || pal.dark != p.dark
+                || pal.alphaScale != p.alphaScale
+                || pal.gapDp != p.gapDp || pal.keyHeightDp != p.keyHeightDp;
         pal = p;
         int oldKh = kh, oldGap = gap;
         initMetrics();
         motion = GlassPalette.motionOn(getContext());
-        baseDirty = true;
+        if (reglass) baseDirty = true;
         layoutDirty = true;
         // A new key height or gap changes the board's measured height: re-measure
         // instead of keeping the height the view was first given.
@@ -155,6 +206,10 @@ public class KeyboardView extends View {
 
     public void reset(boolean autoShift) {
         cancelPending();
+        // The baked glass depends on the page and the palette, not on the caret, the
+        // enter label or the shift state, so a show that lands on the letter page the
+        // board is already on keeps its bitmap.
+        boolean repage = page != KeyboardLayout.LETTERS;
         page = KeyboardLayout.LETTERS;
         rows = KeyboardLayout.rows(page);
         shift = autoShift;
@@ -165,7 +220,7 @@ public class KeyboardView extends View {
         altIndex = -1;
         altList.clear();
         altRects.clear();
-        baseDirty = true;
+        if (repage) baseDirty = true;
         layoutDirty = true;
         requestLayout();
         invalidate();
@@ -211,7 +266,29 @@ public class KeyboardView extends View {
         if (attachedVisible) {
             driftStart = SystemClock.uptimeMillis();
             invalidate();
+        } else {
+            // Hidden mid-press: drop the queued long-press and repeat, so a held
+            // backspace cannot keep deleting into whatever field comes next.
+            cancelPending();
         }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        // The IME window is rebuilt on every show, so a detached view used to leave
+        // its full-window ARGB bitmap and its 110 ms repaint loop behind.
+        attachedVisible = false;
+        cancelPending();
+        handler.removeCallbacksAndMessages(null);
+        if (base != null) {
+            base.recycle();
+            base = null;
+        }
+        baseDirty = true;
+        clipPath = null;
+        clipW = -1;
+        clipH = -1;
     }
 
     /** Rebuild the key grid only when something that shapes it actually changed. */
@@ -484,7 +561,9 @@ public class KeyboardView extends View {
         float w = getWidth(), h = getHeight();
         float veil = blurBackdrop ? 0.42f : 1f;
 
-        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint p = bgPaint;
+        p.reset();
+        p.setAntiAlias(true);
         p.setShader(new LinearGradient(0, 0, w * 0.72f, h,
                 GlassPalette.scaleAlpha(pal.bg1, veil),
                 GlassPalette.scaleAlpha(pal.bg2, veil), Shader.TileMode.CLAMP));
@@ -504,7 +583,9 @@ public class KeyboardView extends View {
     }
 
     private void orb(Canvas canvas, float cx, float cy, float r, int color, float alpha) {
-        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint p = orbPaint;
+        p.reset();
+        p.setAntiAlias(true);
         int solid = GlassPalette.withAlpha(color, alpha);
         int mid = GlassPalette.withAlpha(color, alpha * 0.45f);
         int far = GlassPalette.withAlpha(color, alpha * 0.12f);
@@ -523,7 +604,9 @@ public class KeyboardView extends View {
         int c1 = GlassPalette.hsl(hue, 1f, 0.70f, Math.round(190 * (1f - t)));
         int c2 = GlassPalette.hsl(hue, 1f, 0.62f, Math.round(70 * (1f - t)));
         int c3 = GlassPalette.hsl(hue, 1f, 0.60f, 0);
-        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint p = flarePaint;
+        p.reset();
+        p.setAntiAlias(true);
         p.setShader(new RadialGradient(pressX, pressY, Math.max(1f, r),
                 new int[]{c1, c2, c3}, new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
         canvas.drawCircle(pressX, pressY, r, p);
@@ -546,11 +629,15 @@ public class KeyboardView extends View {
                         && r == activeRow && c == activeCol;
 
                 if (isShiftKey(k) && (shift || caps) && !pressed) {
-                    Paint lit = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    Paint lit = litPaint;
+                    lit.reset();
+                    lit.setAntiAlias(true);
                     lit.setShader(new LinearGradient(0, box.top, 0, box.bottom,
                             0xF2FFFFFF, 0xB8FFFFFF, Shader.TileMode.CLAMP));
                     canvas.drawRoundRect(box, rad, rad, lit);
-                    Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    Paint rim = litRimPaint;
+                    rim.reset();
+                    rim.setAntiAlias(true);
                     rim.setStyle(Paint.Style.STROKE);
                     rim.setStrokeWidth(dp(1.1f));
                     rim.setColor(0xFFFFFFFF);
@@ -568,16 +655,20 @@ public class KeyboardView extends View {
         // baked bitmap, so the pressed treatment is drawn inset by the same
         // amount and reads as the key sinking under the finger.
         float sink = 0.14f * (pal != null ? pal.bounce : 0.7f) * intensity;
-        RectF k = new RectF(r);
+        RectF k = tmpRect;
+        k.set(r);
         k.inset(k.width() * sink / 2f, k.height() * sink / 2f);
         float kr = rad * (1f - sink);
 
         canvas.save();
-        Path cp = new Path();
+        Path cp = tmpPath;
+        cp.reset();
         cp.addRoundRect(k, kr, kr, Path.Direction.CW);
         canvas.clipPath(cp);
 
-        Paint tint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint tint = pressTintPaint;
+        tint.reset();
+        tint.setAntiAlias(true);
         tint.setShader(new LinearGradient(0, k.top, 0, k.bottom,
                 GlassPalette.hsl(hue, 1f, 0.92f, Math.round(120 * intensity)),
                 GlassPalette.hsl(hue, 1f, 0.62f, Math.round(55 * intensity)),
@@ -585,7 +676,9 @@ public class KeyboardView extends View {
         canvas.drawRoundRect(k, kr, kr, tint);
 
         if (pal.glow) {
-            Paint bloom = new Paint(Paint.ANTI_ALIAS_FLAG);
+            Paint bloom = pressBloomPaint;
+            bloom.reset();
+            bloom.setAntiAlias(true);
             bloom.setShader(new RadialGradient(pressX, pressY,
                     Math.max(dp(12), k.width() * 1.05f),
                     GlassPalette.hsl(hue, 1f, 0.97f, Math.round(150 * intensity)),
@@ -595,7 +688,9 @@ public class KeyboardView extends View {
         canvas.restore();
 
         if (pal.glow) {
-            Paint g = new Paint(Paint.ANTI_ALIAS_FLAG);
+            Paint g = pressGlowPaint;
+            g.reset();
+            g.setAntiAlias(true);
             g.setStyle(Paint.Style.STROKE);
             g.setStrokeWidth(dp(1.2f));
             for (int i = 0; i < 3; i++) {
@@ -607,13 +702,17 @@ public class KeyboardView extends View {
             }
         }
 
-        Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint rim = pressRimPaint;
+        rim.reset();
+        rim.setAntiAlias(true);
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(dp(1.2f));
         rim.setColor(GlassPalette.hsl(hue, 1f, 0.86f, Math.round(245 * intensity)));
         canvas.drawRoundRect(k, kr, kr, rim);
 
-        Paint spec = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint spec = pressSpecPaint;
+        spec.reset();
+        spec.setAntiAlias(true);
         spec.setColor(GlassPalette.hsl(hue, 1f, 1f, Math.round(200 * intensity)));
         spec.setStrokeWidth(dp(1.3f));
         spec.setStrokeCap(Paint.Cap.ROUND);
@@ -661,10 +760,12 @@ public class KeyboardView extends View {
                 String label = labelFor(k);
                 if (label.length() == 0) continue;
 
-                Paint tx = new Paint(Paint.ANTI_ALIAS_FLAG);
+                Paint tx = labelPaint;
+                tx.reset();
+                tx.setAntiAlias(true);
                 tx.setColor(color);
                 tx.setTextAlign(Paint.Align.CENTER);
-                tx.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+                tx.setTypeface(LABEL_FACE);
                 float size;
                 if (k.type == Key.FN) {
                     size = dp(15);
@@ -682,7 +783,8 @@ public class KeyboardView extends View {
                 if (tw > maxW && tw > 0) {
                     tx.setTextSize(Math.max(dp(1), size * (maxW / tw)));
                 }
-                Paint.FontMetrics fm = tx.getFontMetrics();
+                Paint.FontMetrics fm = fmScratch;
+                tx.getFontMetrics(fm);
                 float baseline = box.centerY() - (fm.ascent + fm.descent) / 2f;
                 canvas.drawText(label, box.centerX(), baseline, tx);
             }
@@ -832,6 +934,11 @@ public class KeyboardView extends View {
             case MotionEvent.ACTION_CANCEL:
                 onUp(e);
                 return true;
+            case MotionEvent.ACTION_POINTER_DOWN:
+            case MotionEvent.ACTION_POINTER_UP:
+                // A second finger must not re-arm or clear the press the first one
+                // is holding; consuming it keeps the repeat chain single.
+                return true;
             default:
                 return super.onTouchEvent(e);
         }
@@ -839,6 +946,9 @@ public class KeyboardView extends View {
 
     private boolean onDown(MotionEvent e) {
         layoutKeys();
+        // Drop any timer still armed from an earlier press (its ACTION_UP can be
+        // swallowed by a pointer event) before this press arms its own.
+        cancelPending();
         int r = rowAt(e.getY());
         if (r < 0) return true;
         int c = colAt(r, e.getX());
@@ -894,8 +1004,7 @@ public class KeyboardView extends View {
     }
 
     private void cancelPress() {
-        if (longPressRun != null) handler.removeCallbacks(longPressRun);
-        stopRepeat();
+        cancelPending();
         down = false;
         altActive = false;
         altIndex = -1;
@@ -907,8 +1016,7 @@ public class KeyboardView extends View {
     }
 
     private void onUp(MotionEvent e) {
-        if (longPressRun != null) handler.removeCallbacks(longPressRun);
-        stopRepeat();
+        cancelPending();
 
         if (altActive && altIndex >= 0 && altIndex < altList.size()) {
             String alt = altList.get(altIndex);
@@ -927,21 +1035,7 @@ public class KeyboardView extends View {
     }
 
     private void scheduleLongPress() {
-        longPressRun = new Runnable() {
-            @Override
-            public void run() {
-                if (activeKey == null || activeKey.alts == null) return;
-                altList.clear();
-                boolean upper = page == KeyboardLayout.LETTERS && (shift || caps);
-                for (String a : activeKey.alts) {
-                    altList.add(upper ? a.toUpperCase() : a);
-                }
-                buildAltRects();
-                altActive = true;
-                altIndex = -1;
-                invalidate();
-            }
-        };
+        handler.removeCallbacks(longPressRun);
         handler.postDelayed(longPressRun, LONG_PRESS_MS);
     }
 
@@ -975,19 +1069,13 @@ public class KeyboardView extends View {
     }
 
     private void scheduleRepeat() {
-        repeatRun = new Runnable() {
-            @Override
-            public void run() {
-                if (listener != null) listener.onBackspace();
-                handler.postDelayed(repeatRun, REPEAT_EVERY_MS);
-            }
-        };
+        // Cancel first: arming twice used to leave two chains deleting in parallel.
+        handler.removeCallbacks(repeatRun);
         handler.postDelayed(repeatRun, REPEAT_DELAY_MS);
     }
 
     private void stopRepeat() {
-        if (repeatRun != null) handler.removeCallbacks(repeatRun);
-        repeatRun = null;
+        handler.removeCallbacks(repeatRun);
     }
 
     private void fire(Key k) {
@@ -1050,10 +1138,7 @@ public class KeyboardView extends View {
 
     /** Drop any queued long-press or key-repeat so it cannot fire on a stale grid. */
     private void cancelPending() {
-        if (longPressRun != null) {
-            handler.removeCallbacks(longPressRun);
-            longPressRun = null;
-        }
+        handler.removeCallbacks(longPressRun);
         stopRepeat();
     }
 

@@ -29,8 +29,8 @@ echo "== 2/6 linking manifest and resources"
   --java "$OUT/gen" \
   --min-sdk-version 21 \
   --target-sdk-version 34 \
-  --version-code 5 \
-  --version-name 3.0.1 \
+  --version-code 6 \
+  --version-name 3.0.2 \
   --auto-add-overlay
 
 echo "== 3/6 compiling java"

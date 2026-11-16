@@ -4,6 +4,43 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.2] — 2026-11-16
+
+Stress and soak: what the board leaks, queues or churns when it is shown and hidden
+hundreds of times and typed on for hours. No visible change — the same keys, colours,
+labels and animations, drawn from the same numbers.
+
+### Changed
+- The baked glass bitmap is recycled when the view detaches, so a show/hide cycle no
+  longer leaves a full-window ARGB bitmap behind for the collector to find.
+- The baked bitmap is rebuilt only when the glass or the page actually changed, instead
+  of on every show: `onStartInputView` used to force a full rebake even when the settings
+  were identical.
+- One long-press runnable and one repeat runnable now live for the whole view instead of
+  being allocated on every press; a session of thousands of taps no longer churns them.
+- The label paint, the backdrop/orb/flare paints and the pressed-state paints are reused
+  with a reset before each use, and the label typeface and font metrics are looked up
+  once. The draw path no longer allocates a `Paint`, a `Typeface` and a `FontMetrics` per
+  key per frame.
+- The setup screen's backdrop repainted itself every 90 ms forever, although its output
+  takes no time input and never changed; it now redraws only when its size, its palette or
+  its visibility changes.
+- The IME window's blur attributes are written only when the radius actually changed.
+  Setting them relayouts the window, and it used to happen on every show.
+- The palette is resolved once per show rather than three times, saving two preference
+  reads each time the keyboard comes up.
+
+### Fixed
+- A second finger landing while a key was held could re-arm the key-repeat and leave two
+  repeat chains running in parallel, deleting text twice as fast and leaking the first
+  runnable. Secondary pointer events are now consumed instead of disturbing the press.
+- A press whose `ACTION_UP` was swallowed left its long-press timer queued; the next press
+  overwrote the reference and the old timer could never be cancelled, so a phantom accent
+  strip could appear mid-word. Pending timers are dropped before a new press arms its own.
+- A key-repeat tick that outlived its press now stops instead of continuing to delete into
+  whatever field was focused next, and any timer still armed is cancelled when the IME
+  window goes invisible.
+
 ## [3.0.1] — 2026-11-14
 
 Layout maths: the key grid is computed once and reused, and every place it can go
