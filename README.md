@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="assets/icon.png" width="96" height="96" alt="A real offline Android keyboard with a glassy, colour-shifting keypad icon">
+<img src="assets/icon.png" width="96" height="96" alt="Liquid Glass Keyboard icon">
 
-<img src="assets/banner.svg" alt="A real offline Android keyboard with a glassy, colour-shifting keypad — native InputMethodService…">
+<img src="assets/banner.svg" alt="Liquid Glass Keyboard">
 
 <a href="https://github.com/technicalnihilist-lgtm/liquid-glass-keyboard/stargazers"><img src="https://img.shields.io/badge/stars-1-5A31F4?style=for-the-badge&logo=github&logoColor=white" alt="stars: 1"></a>&nbsp;<a href="https://github.com/technicalnihilist-lgtm/liquid-glass-keyboard/network/members"><img src="https://img.shields.io/badge/forks-0-3FB950?style=for-the-badge" alt="forks: 0"></a>
 
-<a href="https://github.com/technicalnihilist-lgtm/liquid-glass-keyboard/releases/latest"><img src="https://img.shields.io/badge/DOWNLOAD-APK-6D5AE6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK"></a>
+<a href="https://github.com/technicalnihilist-lgtm/liquid-glass-keyboard/releases/latest/download/LiquidGlassKeyboard.apk"><img src="https://img.shields.io/badge/DOWNLOAD-APK-6D5AE6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK"></a> <a href="https://technicalnihilist-lgtm.github.io/apps-site/apps/liquid-glass-keyboard.html"><img src="https://img.shields.io/badge/WEBSITE-OPEN-3B82F6?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website"></a>
 
 <b>Support the work</b>
 
